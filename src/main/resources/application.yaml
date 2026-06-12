@@ -1,3 +1,27 @@
 spring:
   application:
-    name: cinema
+    name: movie-reservation-service
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:${SPRING_DATASOURCE_HOST:localhost}}:${DB_PORT:${SPRING_DATASOURCE_PORT:5432}}/${DB_NAME:cinema_db}
+    username: ${DB_USER:cinema}
+    password: ${DB_PASSWORD:cinema}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        show_sql: false
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+server:
+  port: 8080
