@@ -19,8 +19,8 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "authO_sub", unique = true, nullable = false)
-    private String authOSub;
+    @Column(name = "auth0_sub", unique = true, nullable = false)
+    private String auth0Sub;
 
     @Column(nullable = false, unique = true)
     private String email;
