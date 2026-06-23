@@ -10,4 +10,6 @@ public interface IReservationService {
             Long showtimeId,
             List<Long> seatIds
     );
+
+    void cancelReservation(String auth0Sub, Long reservationId);
 }
