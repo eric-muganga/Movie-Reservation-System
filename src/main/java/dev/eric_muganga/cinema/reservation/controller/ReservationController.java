@@ -5,6 +5,7 @@ import dev.eric_muganga.cinema.reservation.dto.ReservationResult;
 import dev.eric_muganga.cinema.reservation.service.IReservationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -25,5 +26,14 @@ public class ReservationController {
                 request.showtimeId(),
                 request.seatIds()
         );
+    }
+
+    @DeleteMapping("/{reservationId}")
+    public ResponseEntity<Void> cancelReservation(
+            @RequestHeader("X-Debug-User") String auth0Sub,
+            @PathVariable Long reservationId
+    ) {
+        reservationService.cancelReservation(auth0Sub, reservationId);
+        return ResponseEntity.noContent().build();
     }
 }

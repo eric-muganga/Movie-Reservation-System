@@ -1,6 +1,7 @@
 package dev.eric_muganga.cinema.reservation.service;
 
 import dev.eric_muganga.cinema.common.exception.ResourceNotFoundException;
+import dev.eric_muganga.cinema.common.exception.SeatConflictException;
 import dev.eric_muganga.cinema.reservation.dto.ReservationResult;
 import dev.eric_muganga.cinema.reservation.dto.ReservedSeatDto;
 import dev.eric_muganga.cinema.reservation.entity.*;
@@ -24,7 +25,8 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class ReservationServiceImpl implements IReservationService{
+public class ReservationServiceImpl implements IReservationService {
+
     private final ReservationRepository reservationRepository;
     private final ShowtimeRepository showtimeRepository;
     private final SeatRepository seatRepository;
@@ -44,11 +46,13 @@ public class ReservationServiceImpl implements IReservationService{
 
         // 1) Load user by auth0Sub
         User user = userRepository.findByAuth0Sub(auth0Sub)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found for auth0Sub: " + auth0Sub));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found for auth0Sub: " + auth0Sub));
 
         // 2) Load showtime and validate it is not in the past
         Showtime showtime = showtimeRepository.findById(showtimeId)
-                .orElseThrow(() -> new ResourceNotFoundException("Showtime not found: " + showtimeId));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Showtime not found: " + showtimeId));
 
         OffsetDateTime now = OffsetDateTime.now();
         if (showtime.getStartTime().isBefore(now)) {
@@ -66,22 +70,30 @@ public class ReservationServiceImpl implements IReservationService{
                 .allMatch(seat -> seat.getAuditorium().getId().equals(auditoriumId));
 
         if (!allInSameAuditorium) {
-            throw new IllegalArgumentException("All seats must belong to the same auditorium as the showtime");
+            throw new IllegalArgumentException(
+                    "All seats must belong to the same auditorium as the showtime");
         }
 
-        // 4) Check for existing reservations for these seats in this showtime
-        // using your unique (showtime_id, seat_id) constraint in reservation_seats.
-        // If a seat is already reserved, the insert will fail later, but we can pre-check using repository methods.
+        // 4) Prevent double booking: check for already reserved seats
+        List<Long> alreadyReservedSeatIds =
+                reservationSeatRepository.findReservedSeatIdsForShowtime(showtimeId, seatIds);
+
+        if (!alreadyReservedSeatIds.isEmpty()) {
+            throw new SeatConflictException(
+                    "Some seats are already reserved for this showtime: " + alreadyReservedSeatIds);
+        }
 
         // 5) Check for active seat locks held by someone else
         List<SeatLock> activeLocks = seatLockRepository.findActiveLocksForShowtime(showtimeId, now);
+
         Set<Long> lockedSeatIdsByOthers = activeLocks.stream()
                 .filter(lock -> !lock.getUser().getId().equals(user.getId()))
                 .map(lock -> lock.getSeat().getId())
                 .collect(Collectors.toSet());
 
         if (!Collections.disjoint(lockedSeatIdsByOthers, new HashSet<>(seatIds))) {
-            throw new IllegalStateException("Some seats are currently locked by another user");
+            throw new SeatConflictException(
+                    "Some seats are currently locked by another user");
         }
 
         // 6) Create/refresh locks for this user and these seats
@@ -144,12 +156,45 @@ public class ReservationServiceImpl implements IReservationService{
                 .toList();
 
         return new ReservationResult(
-                reservation.getId(),
-                reservation.getStatus().name(),
+                savedReservation.getId(),
+                savedReservation.getStatus().name(),
                 showtime.getId(),
-                reservation.getCreatedAt(),
-                reservation.getTotalAmount(),
+                savedReservation.getCreatedAt(),
+                savedReservation.getTotalAmount(),
                 seatDtos
         );
+    }
+
+    @Override
+    @Transactional
+    public void cancelReservation(String auth0Sub, Long reservationId) {
+        // 1) Load user
+        User user = userRepository.findByAuth0Sub(auth0Sub)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found for auth0Sub: " + auth0Sub));
+
+        // 2) Load reservation
+        Reservation reservation = reservationRepository.findById(reservationId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Reservation not found: " + reservationId));
+
+        // 3) Ensure reservation belongs to user
+        if (!reservation.getUser().getId().equals(user.getId())) {
+            // Use 404 to avoid leaking existence of others' reservations
+            throw new ResourceNotFoundException("Reservation not found: " + reservationId);
+        }
+
+        // 4) If already cancelled, no-op (idempotent)
+        if (reservation.getStatus() == ReservationStatus.CANCELLED) {
+            return;
+        }
+
+        // 5) Mark as cancelled
+        reservation.setStatus(ReservationStatus.CANCELLED);
+        reservation.setUpdatedAt(OffsetDateTime.now());
+        reservationRepository.save(reservation);
+
+        // 6) Optionally: free locks or mark reservation seats as cancelled.
+        // Seating logic should only treat CONFIRMED reservations as reserved.
     }
 }
