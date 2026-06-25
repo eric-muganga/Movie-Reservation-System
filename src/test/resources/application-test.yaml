@@ -1,0 +1,25 @@
+# src/test/resources/application-test.yaml
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cinema_db
+    username: cinema
+    password: cinema
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+
+logging:
+  level:
+    org.springframework.jdbc.datasource: DEBUG
+    org.springframework.boot.autoconfigure.jdbc: DEBUG
+    org.flywaydb: DEBUG
+
+server:
+  port: 8080
