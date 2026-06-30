@@ -1,6 +1,7 @@
 package dev.eric_muganga.cinema.reservation;
 
 import dev.eric_muganga.cinema.CinemaApplication;
+import dev.eric_muganga.cinema.reservation.repository.SeatLockRepository;
 import dev.eric_muganga.cinema.user.entity.User;
 import dev.eric_muganga.cinema.user.repository.UserRepository;
 import org.junit.jupiter.api.*;
@@ -57,8 +58,11 @@ public class ReservationFlowIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private SeatLockRepository seatLockRepository;
+
     private static final String DEBUG_USER = "auth0|test-user-123";
-    private static final long SHOWTIME_ID = 1L;
+    private static final long SHOWTIME_ID = 3L;
 
     @BeforeAll
     void seedDebugUser() {
@@ -73,13 +77,34 @@ public class ReservationFlowIntegrationTest {
         }
     }
 
+    private void seedUser(String auth0Sub) {
+        userRepository.findByAuth0Sub(auth0Sub)
+                .orElseGet(() -> {
+                    User user = new User();
+                    user.setAuth0Sub(auth0Sub);
+                    user.setEmail(auth0Sub + "@example.com");
+                    user.setFullName("Debug " + auth0Sub);
+                    user.setCreatedAt(OffsetDateTime.now());
+                    user.setUpdatedAt(OffsetDateTime.now());
+                    return userRepository.save(user);
+                });
+    }
+
+    @BeforeAll
+    void seedDebugUsers() {
+        seedUser(DEBUG_USER);
+        seedUser("auth0|lock-user-1");
+        seedUser("auth0|lock-user-2");
+        seedUser("auth0|lock-user-3");
+    }
+
     /**
      * Helper JSON body used in multiple tests.
      */
     private String seatsRequestBody() {
         return """
             {
-              "showtimeId": 1,
+              "showtimeId": 3,
               "seatIds": [1, 2, 3]
             }
             """;
@@ -136,7 +161,7 @@ public class ReservationFlowIntegrationTest {
         // Step 1: create a reservation on seats 4 and 5
         String createBody = """
             {
-              "showtimeId": 1,
+              "showtimeId": 3,
               "seatIds": [4, 5]
             }
             """;
@@ -164,6 +189,94 @@ public class ReservationFlowIntegrationTest {
                         .header("X-Debug-User", DEBUG_USER))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.rows", not(empty())));
+    }
+
+
+    @Test
+    @Order(4)
+    void reserveNow_onSeatsLockedByOtherUser_returns409Conflict() throws Exception {
+        // Arrange: seed another user with its own debug header
+        String OTHER_USER = "auth0|lock-user-1";
+        if (userRepository.findByAuth0Sub(OTHER_USER).isEmpty()) {
+            User user = new User();
+            user.setAuth0Sub(OTHER_USER);
+            user.setEmail("lock1@example.com");
+            user.setFullName("Lock User 1");
+            user.setCreatedAt(OffsetDateTime.now());
+            user.setUpdatedAt(OffsetDateTime.now());
+            userRepository.save(user);
+        }
+
+        String lockRequestBody = """
+        {
+          "showtimeId": 3,
+          "seatIds": [1, 2]
+        }
+        """;
+
+        // First: other user reserves seats → should be OK
+        mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", OTHER_USER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(lockRequestBody))
+                .andExpect(status().isConflict());
+
+// Now: original debug user tries to reserve same seats → should see conflict
+        mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", DEBUG_USER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(lockRequestBody))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error", containsString("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("already reserved")));
+    }
+
+
+    @Test
+    @Order(5)
+    void expiredLocks_doNotBlockNewReservation() throws Exception {
+        String FIRST_USER = "auth0|lock-user-2";
+        String SECOND_USER = "auth0|lock-user-3";
+
+        // seed users (similar to previous test)
+        // ... omitted for brevity
+
+        String body = """
+        {
+          "showtimeId": 3,
+          "seatIds": [3]
+        }
+        """;
+
+        // First user reserves seat 3 (creates lock + CONFIRMED reservation)
+        mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", FIRST_USER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict());
+
+        // Force-lock expiry for demonstration: set lock_expires_at in the past
+        OffsetDateTime past = OffsetDateTime.now().minusMinutes(10);
+        seatLockRepository.findActiveLocksForShowtime(3L, OffsetDateTime.now())
+                .forEach(lock -> {
+                    lock.setLockExpiresAt(past);
+                    // keep status ACTIVE so expireLocks(now) will flip them to EXPIRED
+                });
+        seatLockRepository.saveAll(
+                seatLockRepository.findActiveLocksForShowtime(3L, OffsetDateTime.now())
+        );
+
+        // Now second user attempts to reserve the same seat
+        // reserveNow() will call expireLocks(now) first, so locks become EXPIRED
+        mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", SECOND_USER)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error", containsString("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("already reserved")));
     }
 
     /**

@@ -36,4 +36,5 @@ public class ReservationController {
         reservationService.cancelReservation(auth0Sub, reservationId);
         return ResponseEntity.noContent().build();
     }
+
 }
