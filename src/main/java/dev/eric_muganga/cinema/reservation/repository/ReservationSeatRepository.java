@@ -36,4 +36,6 @@ public interface ReservationSeatRepository extends JpaRepository<ReservationSeat
          AND rs.reservation.status = dev.eric_muganga.cinema.reservation.entity.ReservationStatus.CONFIRMED
        """)
     List<ReservationSeat> findActiveByShowtimeId(Long showtimeId);
+
+    int countByShowtime_Id(Long showtimeId);
 }
