@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<th:block th:fragment="content">
+  <div class="mb-4">
+    <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
+      <div>
+        <h1 class="h3 mb-1">Daily Showtime Performance</h1>
+        <p class="text-muted mb-0">
+          Occupancy and revenue for
+          <strong th:text="${businessDate}">2026-07-01</strong>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4">
+    <div class="col-lg-4 col-md-6">
+      <div class="card card-soft h-100">
+        <div class="card-body">
+          <div class="text-muted small">Showtimes on page</div>
+          <div class="display-6 fw-bold mb-0" th:text="${reports.items.size()}">0</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4 col-md-6">
+      <div class="card card-soft h-100">
+        <div class="card-body">
+          <div class="text-muted small">Current page</div>
+          <div class="display-6 fw-bold mb-0">
+            <span th:text="${reports.page + 1}">1</span>
+            <span class="fs-4 text-muted">/</span>
+            <span class="fs-4" th:text="${reports.totalPages}">1</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col-lg-4 col-md-12">
+      <div class="card card-soft h-100">
+        <div class="card-body">
+          <div class="text-muted small">Total showtimes</div>
+          <div class="display-6 fw-bold mb-0" th:text="${reports.totalItems}">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card card-soft mb-4">
+    <div class="card-body">
+      <form class="row g-3 align-items-end" method="get" th:action="@{/admin/showtimes/daily}">
+        <div class="col-lg-3 col-md-6">
+          <label for="date" class="form-label">Date</label>
+          <input id="date" name="date" type="date" class="form-control" th:value="${businessDate}">
+        </div>
+
+        <div class="col-lg-2 col-md-6">
+          <label for="size" class="form-label">Rows</label>
+          <select id="size" name="size" class="form-select">
+            <option th:selected="${size == 10}" value="10">10</option>
+            <option th:selected="${size == 20}" value="20">20</option>
+            <option th:selected="${size == 50}" value="50">50</option>
+          </select>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+          <label for="sortBy" class="form-label">Sort by</label>
+          <select id="sortBy" name="sortBy" class="form-select">
+            <option th:selected="${sortBy == 'startTime'}" value="startTime">Start time</option>
+            <option th:selected="${sortBy == 'capacityPercent'}" value="capacityPercent">Capacity %</option>
+            <option th:selected="${sortBy == 'totalRevenue'}" value="totalRevenue">Revenue</option>
+          </select>
+        </div>
+
+        <div class="col-lg-2 col-md-6">
+          <label for="direction" class="form-label">Direction</label>
+          <select id="direction" name="direction" class="form-select">
+            <option th:selected="${direction == 'asc'}" value="asc">Ascending</option>
+            <option th:selected="${direction == 'desc'}" value="desc">Descending</option>
+          </select>
+        </div>
+
+        <div class="col-lg-2 col-md-12">
+          <input type="hidden" name="page" value="0">
+          <button type="submit" class="btn btn-primary w-100">Apply</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card card-soft">
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+          <tr>
+            <th>Movie</th>
+            <th>Auditorium</th>
+            <th>Start</th>
+            <th>End</th>
+            <th class="text-end">Reserved</th>
+            <th class="text-end">Total Seats</th>
+            <th class="text-end">Capacity</th>
+            <th class="text-end">Revenue</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:if="${#lists.isEmpty(reports.items)}">
+            <td colspan="8" class="text-center text-muted py-5">
+              No showtimes found for this date.
+            </td>
+          </tr>
+
+          <tr th:each="report : ${reports.items}">
+            <td>
+              <div class="fw-semibold" th:text="${report.movieTitle}">Movie title</div>
+              <div class="text-muted small">Showtime #<span th:text="${report.showtimeId}">1</span></div>
+            </td>
+            <td th:text="${report.auditoriumName}">Auditorium</td>
+            <td th:text="${#temporals.format(report.startTime, 'HH:mm')}">18:00</td>
+            <td th:text="${#temporals.format(report.endTime, 'HH:mm')}">20:00</td>
+            <td class="text-end" th:text="${report.reservedSeats}">0</td>
+            <td class="text-end" th:text="${report.totalSeats}">0</td>
+            <td class="text-end">
+                            <span class="badge rounded-pill"
+                                  th:classappend="${report.capacityPercent >= 80} ? ' text-bg-success' : (${report.capacityPercent >= 50} ? ' text-bg-warning' : ' text-bg-danger')"
+                                  th:text="${#numbers.formatDecimal(report.capacityPercent, 1, 0)} + '%'">
+                                0%
+                            </span>
+            </td>
+            <td class="text-end fw-semibold"
+                th:text="${#numbers.formatCurrency(report.totalRevenue)}">
+              $0.00
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 p-3 border-top">
+        <div class="text-muted small">
+          Showing <span th:text="${reports.items.size()}">0</span>
+          of <span th:text="${reports.totalItems}">0</span> records
+        </div>
+
+        <nav th:if="${reports.totalPages > 1}" aria-label="Showtime pagination">
+          <ul class="pagination mb-0">
+            <li class="page-item" th:classappend="${reports.page == 0} ? 'disabled'">
+              <a class="page-link"
+                 th:href="@{/admin/showtimes/daily(date=${businessDate},page=${reports.page - 1},size=${size},sortBy=${sortBy},direction=${direction})}">
+                Previous
+              </a>
+            </li>
+
+            <li class="page-item"
+                th:each="i : ${#numbers.sequence(0, reports.totalPages - 1)}"
+                th:classappend="${i == reports.page} ? 'active'">
+              <a class="page-link"
+                 th:text="${i + 1}"
+                 th:href="@{/admin/showtimes/daily(date=${businessDate},page=${i},size=${size},sortBy=${sortBy},direction=${direction})}">
+                1
+              </a>
+            </li>
+
+            <li class="page-item" th:classappend="${reports.page + 1 >= reports.totalPages} ? 'disabled'">
+              <a class="page-link"
+                 th:href="@{/admin/showtimes/daily(date=${businessDate},page=${reports.page + 1},size=${size},sortBy=${sortBy},direction=${direction})}">
+                Next
+              </a>
+            </li>
+          </ul>
+        </nav>
+      </div>
+    </div>
+  </div>
+</th:block>
+</body>
+</html>
