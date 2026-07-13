@@ -46,9 +46,8 @@ public class AdminDashboardController {
         model.addAttribute("size", size);
         model.addAttribute("sortBy", sortBy);
         model.addAttribute("direction", direction);
-        model.addAttribute("content", "admin/daily-showtimes :: content");
         model.addAttribute("title", "Daily Showtime Performance");
 
-        return "admin/layout";
+        return "admin/daily-showtimes";
     }
 }
