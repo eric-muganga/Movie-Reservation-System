@@ -1,35 +1,25 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <body>
-<div th:fragment="topbar" class="topbar px-4 py-3 d-flex flex-wrap justify-content-between align-items-center gap-3">
-  <div>
-    <h4 class="mb-0" th:text="${title}">Daily Showtime Performance</h4>
-    <div class="text-muted small">
-      Manage performance, occupancy, and revenue
+<header th:fragment="topbar" class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <h2 class="topbar-title" th:text="${title}">Daily Showtime Performance</h2>
+      <p class="topbar-subtitle">Manage performance, occupancy, and revenue</p>
     </div>
-  </div>
 
-  <div class="d-flex align-items-center gap-3">
-    <div class="text-end">
-      <div class="small text-muted">Today</div>
-      <div class="fw-semibold"
-           th:text="${#temporals.format(T(java.time.LocalDateTime).now(), 'dd MMM yyyy, HH:mm')}">
-        08 Jul 2026, 16:53
+    <div class="topbar-meta">
+      <div class="topbar-date-block">
+        <span class="topbar-date-label">Today</span>
+        <span class="topbar-date-value"
+              th:text="${#temporals.format(T(java.time.LocalDateTime).now(), 'dd MMM yyyy, HH:mm')}">
+                    08 Jul 2026, 16:53
+                </span>
       </div>
-    </div>
 
-    <div class="dropdown">
-      <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown">
-        Admin
-      </button>
-      <ul class="dropdown-menu dropdown-menu-end shadow-sm">
-        <li><a class="dropdown-item" href="#">Profile</a></li>
-        <li><a class="dropdown-item" href="#">Settings</a></li>
-        <li><hr class="dropdown-divider"></li>
-        <li><a class="dropdown-item text-danger" href="#">Logout</a></li>
-      </ul>
+      <div class="topbar-user">Admin</div>
     </div>
   </div>
-</div>
+</header>
 </body>
 </html>
