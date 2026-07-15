@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${title}, ~{::section})}">
+<head>
+  <title>Daily Showtime Performance</title>
+</head>
+<body>
+<section class="page-section">
+  <div class="page-header">
+    <div>
+      <h1 class="page-title">Daily Showtime Performance</h1>
+      <p class="page-subtitle">
+        Occupancy and revenue for
+        <strong th:text="${businessDate}">2026-07-01</strong>
+      </p>
+    </div>
+  </div>
+
+  <div class="stats-grid">
+    <article class="stat-card">
+      <span class="stat-label">Showtimes on page</span>
+      <span class="stat-value" th:text="${reports.items.size()}">0</span>
+    </article>
+
+    <article class="stat-card">
+      <span class="stat-label">Current page</span>
+      <div class="stat-value stat-value-inline">
+        <span th:text="${reports.page + 1}">1</span>
+        <span class="stat-separator">/</span>
+        <span th:text="${reports.totalPages}">1</span>
+      </div>
+    </article>
+
+    <article class="stat-card">
+      <span class="stat-label">Total showtimes</span>
+      <span class="stat-value" th:text="${reports.totalItems}">0</span>
+    </article>
+  </div>
+
+  <section class="card-soft form-card">
+    <form class="filters-form" method="get" th:action="@{/admin/showtimes/daily}">
+      <div class="form-group">
+        <label for="date">Date</label>
+        <input id="date" name="date" type="date" th:value="${businessDate}">
+      </div>
+
+      <div class="form-group">
+        <label for="size">Rows</label>
+        <select id="size" name="size">
+          <option th:selected="${size == 10}" value="10">10</option>
+          <option th:selected="${size == 20}" value="20">20</option>
+          <option th:selected="${size == 50}" value="50">50</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="sortBy">Sort by</label>
+        <select id="sortBy" name="sortBy">
+          <option th:selected="${sortBy == 'startTime'}" value="startTime">Start time</option>
+          <option th:selected="${sortBy == 'capacityPercent'}" value="capacityPercent">Capacity %</option>
+          <option th:selected="${sortBy == 'totalRevenue'}" value="totalRevenue">Revenue</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="direction">Direction</label>
+        <select id="direction" name="direction">
+          <option th:selected="${direction == 'asc'}" value="asc">Ascending</option>
+          <option th:selected="${direction == 'desc'}" value="desc">Descending</option>
+        </select>
+      </div>
+
+      <div class="form-group form-action">
+        <input type="hidden" name="page" value="0">
+        <button type="submit" class="btn-primary">Apply</button>
+      </div>
+    </form>
+  </section>
+
+  <section class="table-card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+        <tr>
+          <th>Movie</th>
+          <th>Auditorium</th>
+          <th>Start</th>
+          <th>End</th>
+          <th class="text-right">Reserved</th>
+          <th class="text-right">Total Seats</th>
+          <th class="text-right">Capacity</th>
+          <th class="text-right">Revenue</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:if="${#lists.isEmpty(reports.items)}">
+          <td colspan="8" class="empty-state-cell">
+            No showtimes found for this date.
+          </td>
+        </tr>
+
+        <tr th:each="report : ${reports.items}">
+          <td>
+            <div class="cell-title" th:text="${report.movieTitle}">Movie title</div>
+            <div class="cell-subtitle">
+              Showtime #<span th:text="${report.showtimeId}">1</span>
+            </div>
+          </td>
+          <td th:text="${report.auditoriumName}">Auditorium</td>
+          <td th:text="${#temporals.format(report.startTime, 'HH:mm')}">18:00</td>
+          <td th:text="${#temporals.format(report.endTime, 'HH:mm')}">20:00</td>
+          <td class="text-right" th:text="${report.reservedSeats}">0</td>
+          <td class="text-right" th:text="${report.totalSeats}">0</td>
+          <td class="text-right">
+                            <span class="badge"
+                                  th:classappend="${report.capacityPercent >= 80} ? ' badge-success' : (${report.capacityPercent >= 50} ? ' badge-warning' : ' badge-danger')"
+                                  th:text="${#numbers.formatDecimal(report.capacityPercent, 1, 0)} + '%'">
+                                0%
+                            </span>
+          </td>
+          <td class="text-right value-strong"
+              th:text="${#numbers.formatCurrency(report.totalRevenue)}">
+            $0.00
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="table-footer">
+      <div class="table-meta">
+        Showing <span th:text="${reports.items.size()}">0</span>
+        of <span th:text="${reports.totalItems}">0</span> records
+      </div>
+
+      <nav th:if="${reports.totalPages > 1}" aria-label="Showtime pagination">
+        <ul class="pagination">
+          <li>
+            <a class="page-link"
+               th:classappend="${reports.page == 0} ? ' disabled'"
+               th:href="@{/admin/showtimes/daily(date=${businessDate},page=${reports.page - 1},size=${size},sortBy=${sortBy},direction=${direction})}">
+              Previous
+            </a>
+          </li>
+
+          <li th:each="i : ${#numbers.sequence(0, reports.totalPages - 1)}">
+            <a class="page-link"
+               th:classappend="${i == reports.page} ? ' active'"
+               th:text="${i + 1}"
+               th:href="@{/admin/showtimes/daily(date=${businessDate},page=${i},size=${size},sortBy=${sortBy},direction=${direction})}">
+              1
+            </a>
+          </li>
+
+          <li>
+            <a class="page-link"
+               th:classappend="${reports.page + 1 >= reports.totalPages} ? ' disabled'"
+               th:href="@{/admin/showtimes/daily(date=${businessDate},page=${reports.page + 1},size=${size},sortBy=${sortBy},direction=${direction})}">
+              Next
+            </a>
+          </li>
+        </ul>
+      </nav>
+    </div>
+  </section>
+</section>
+</body>
+</html>

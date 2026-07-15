@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside th:fragment="sidebar" class="sidebar">
+    <div class="sidebar-inner">
+        <div class="sidebar-brand">
+            <div class="brand-mark">C</div>
+            <div>
+                <h2 class="brand-title">Cinema Admin</h2>
+                <p class="brand-subtitle">Reporting dashboard</p>
+            </div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <a class="sidebar-link"
+               th:classappend="${#strings.contains(currentUri, '/admin/showtimes/daily')} ? ' active' : ''"
+               th:href="@{/admin/showtimes/daily}">
+                Daily showtimes
+            </a>
+
+            <a class="sidebar-link sidebar-link-muted" href="#">
+                Movies
+            </a>
+
+            <a class="sidebar-link sidebar-link-muted" href="#">
+                Revenue
+            </a>
+
+            <a class="sidebar-link sidebar-link-muted" href="#">
+                Reservations
+            </a>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="sidebar-panel">
+                <div class="sidebar-panel-label">Admin area</div>
+                <div class="sidebar-panel-title">Dashboard tools</div>
+            </div>
+        </div>
+    </div>
+</aside>
+</body>
+</html>

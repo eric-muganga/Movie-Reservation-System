@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<header th:fragment="topbar" class="topbar">
+  <div class="topbar-inner">
+    <div>
+      <h2 class="topbar-title" th:text="${title}">Daily Showtime Performance</h2>
+      <p class="topbar-subtitle">Manage performance, occupancy, and revenue</p>
+    </div>
+
+    <div class="topbar-meta">
+      <div class="topbar-date-block">
+        <span class="topbar-date-label">Today</span>
+        <span class="topbar-date-value"
+              th:text="${#temporals.format(T(java.time.LocalDateTime).now(), 'dd MMM yyyy, HH:mm')}">
+                    08 Jul 2026, 16:53
+                </span>
+      </div>
+
+      <div class="topbar-user">Admin</div>
+    </div>
+  </div>
+</header>
+</body>
+</html>

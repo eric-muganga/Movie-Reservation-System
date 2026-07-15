@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:fragment="layout(title, content)">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${title}">Admin Dashboard</title>
+    <link rel="stylesheet" th:href="@{/css/admin.css}">
+</head>
+<body>
+<div th:replace="~{admin/fragments/sidebar :: sidebar}"></div>
+
+<div class="content-wrap">
+    <div th:replace="~{admin/fragments/topbar :: topbar(title=${title})}"></div>
+
+    <main class="dashboard-shell">
+        <th:block th:replace="${content}"></th:block>
+    </main>
+</div>
+
+<div th:replace="~{admin/fragments/scripts :: scripts}"></div>
+</body>
+</html>
