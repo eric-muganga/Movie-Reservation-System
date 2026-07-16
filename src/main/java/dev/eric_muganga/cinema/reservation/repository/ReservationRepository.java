@@ -2,6 +2,8 @@ package dev.eric_muganga.cinema.reservation.repository;
 
 import dev.eric_muganga.cinema.reservation.entity.Reservation;
 import dev.eric_muganga.cinema.reservation.entity.ReservationStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -29,4 +31,6 @@ public interface ReservationRepository extends JpaRepository<Reservation, Long> 
           and r.status = dev.eric_muganga.cinema.reservation.entity.ReservationStatus.CONFIRMED
     """)
     BigDecimal sumTotalAmountByShowtimeId( @Param("showtimeId") Long showtimeId);
+
+    Page<Reservation> findByStatus(ReservationStatus status, Pageable pageable);
 }
