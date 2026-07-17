@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${title}, ~{::section})}">
+<head>
+    <title>Movies</title>
+</head>
+<body>
+<section class="page-section">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Movies</h1>
+            <p class="page-subtitle">
+                Movies and scheduled showtimes for
+                <strong th:text="${businessDate}">2026-07-16</strong>
+            </p>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <article class="stat-card">
+            <span class="stat-label">Movies on page</span>
+            <span class="stat-value" th:text="${movies.size()}">0</span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Business date</span>
+            <span class="stat-value" th:text="${businessDate}">2026-07-16</span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Total showtimes</span>
+            <span class="stat-value" th:text="${totalShowtimes}">0</span>
+        </article>
+    </div>
+
+    <section class="card-soft form-card">
+        <form class="filters-form filters-form-single" method="get" th:action="@{/admin/movies}">
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input id="date" name="date" type="date" th:value="${businessDate}">
+            </div>
+
+            <div class="form-group form-action">
+                <button type="submit" class="btn-primary">Apply</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="table-card">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Movie</th>
+                    <th>Poster</th>
+                    <th class="text-right">Showtimes</th>
+                    <th>Schedule</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(movies)}">
+                    <td colspan="4" class="empty-state-cell">No movies found for this date.</td>
+                </tr>
+
+                <tr th:each="movie : ${movies}">
+                    <td>
+                        <div class="cell-title" th:text="${movie.title()}">Movie title</div>
+                        <div class="cell-subtitle">#<span th:text="${movie.movieId()}">1</span></div>
+                    </td>
+                    <td>
+                        <span th:if="${movie.posterUrl() == null or #strings.isEmpty(movie.posterUrl())}"
+                              class="cell-subtitle">No poster</span>
+                        <a th:if="${movie.posterUrl() != null and !#strings.isEmpty(movie.posterUrl())}"
+                           th:href="${movie.posterUrl()}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="poster-link">Open poster</a>
+                    </td>
+                    <td class="text-right value-strong" th:text="${movie.showtimes().size()}">0</td>
+                    <td>
+                        <div class="showtime-list" th:if="${!#lists.isEmpty(movie.showtimes())}">
+                            <span class="badge badge-info"
+                                  th:each="showtime : ${movie.showtimes()}"
+                                  th:text="${#temporals.format(showtime.startTime(), 'HH:mm')} + ' - ' + ${#temporals.format(showtime.endTime(), 'HH:mm')}">
+                                18:00 - 20:00
+                            </span>
+                        </div>
+                        <span th:if="${#lists.isEmpty(movie.showtimes())}"
+                              class="cell-subtitle">No scheduled showtimes</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
+</body>
+</html><!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${title}, ~{::section})}">
+<head>
+    <title>Movies</title>
+</head>
+<body>
+<section class="page-section">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Movies</h1>
+            <p class="page-subtitle">
+                Movies and scheduled showtimes for
+                <strong th:text="${businessDate}">2026-07-16</strong>
+            </p>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <article class="stat-card">
+            <span class="stat-label">Movies on page</span>
+            <span class="stat-value" th:text="${movies.size()}">0</span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Business date</span>
+            <span class="stat-value" th:text="${businessDate}">2026-07-16</span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Total showtimes</span>
+            <span class="stat-value" th:text="${totalShowtimes}">0</span>
+        </article>
+    </div>
+
+    <section class="card-soft form-card">
+        <form class="filters-form filters-form-single" method="get" th:action="@{/admin/movies}">
+            <div class="form-group">
+                <label for="date">Date</label>
+                <input id="date" name="date" type="date" th:value="${businessDate}">
+            </div>
+
+            <div class="form-group form-action">
+                <button type="submit" class="btn-primary">Apply</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="table-card">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Movie</th>
+                    <th>Poster</th>
+                    <th class="text-right">Showtimes</th>
+                    <th>Schedule</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${#lists.isEmpty(movies)}">
+                    <td colspan="4" class="empty-state-cell">No movies found for this date.</td>
+                </tr>
+
+                <tr th:each="movie : ${movies}">
+                    <td>
+                        <div class="cell-title" th:text="${movie.title()}">Movie title</div>
+                        <div class="cell-subtitle">#<span th:text="${movie.movieId()}">1</span></div>
+                    </td>
+                    <td>
+                        <span th:if="${movie.posterUrl() == null or #strings.isEmpty(movie.posterUrl())}"
+                              class="cell-subtitle">No poster</span>
+                        <a th:if="${movie.posterUrl() != null and !#strings.isEmpty(movie.posterUrl())}"
+                           th:href="${movie.posterUrl()}"
+                           target="_blank"
+                           rel="noopener noreferrer"
+                           class="poster-link">Open poster</a>
+                    </td>
+                    <td class="text-right value-strong" th:text="${movie.showtimes().size()}">0</td>
+                    <td>
+                        <div class="showtime-list" th:if="${!#lists.isEmpty(movie.showtimes())}">
+                            <span class="badge badge-info"
+                                  th:each="showtime : ${movie.showtimes()}"
+                                  th:text="${#temporals.format(showtime.startTime(), 'HH:mm')} + ' - ' + ${#temporals.format(showtime.endTime(), 'HH:mm')}">
+                                18:00 - 20:00
+                            </span>
+                        </div>
+                        <span th:if="${#lists.isEmpty(movie.showtimes())}"
+                              class="cell-subtitle">No scheduled showtimes</span>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
+</body>
+</html>
