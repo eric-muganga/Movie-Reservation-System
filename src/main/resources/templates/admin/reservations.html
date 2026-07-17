@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${title}, ~{::section})}">
+<head>
+    <title>Reservations</title>
+</head>
+<body>
+<section class="page-section">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Reservations</h1>
+            <p class="page-subtitle">Customer reservations and booking status</p>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <article class="stat-card">
+            <span class="stat-label">Reservations on page</span>
+            <span class="stat-value" th:text="${reservations.numberOfElements}">0</span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Current page</span>
+            <div class="stat-value stat-value-inline">
+                <span th:text="${reservations.number + 1}">1</span>
+                <span class="stat-separator">/</span>
+                <span th:text="${reservations.totalPages == 0 ? 1 : reservations.totalPages}">1</span>
+            </div>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Total reservations</span>
+            <span class="stat-value" th:text="${reservations.totalElements}">0</span>
+        </article>
+    </div>
+
+    <section class="card-soft form-card">
+        <form class="filters-form" method="get" th:action="@{/admin/reservations}">
+            <div class="form-group">
+                <label for="status">Status</label>
+                <select id="status" name="status">
+                    <option value="" th:selected="${status == null or status == ''}">All</option>
+                    <option value="PENDING" th:selected="${status == 'PENDING'}">Pending</option>
+                    <option value="CONFIRMED" th:selected="${status == 'CONFIRMED'}">Confirmed</option>
+                    <option value="CANCELLED" th:selected="${status == 'CANCELLED'}">Cancelled</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="size">Rows</label>
+                <select id="size" name="size">
+                    <option th:selected="${size == 10}" value="10">10</option>
+                    <option th:selected="${size == 20}" value="20">20</option>
+                    <option th:selected="${size == 50}" value="50">50</option>
+                </select>
+            </div>
+
+            <div class="form-group form-action">
+                <input type="hidden" name="page" value="0">
+                <button type="submit" class="btn-primary">Apply</button>
+            </div>
+        </form>
+    </section>
+
+    <section class="table-card">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Reservation</th>
+                    <th>Customer</th>
+                    <th>Movie</th>
+                    <th>Showtime</th>
+                    <th>Status</th>
+                    <th class="text-right">Amount</th>
+                    <th>Created</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:if="${reservations.empty}">
+                    <td colspan="7" class="empty-state-cell">No reservations found.</td>
+                </tr>
+
+                <tr th:each="reservation : ${reservations.content}">
+                    <td>
+                        <div class="cell-title">#<span th:text="${reservation.reservationId()}">1</span></div>
+                    </td>
+                    <td th:text="${reservation.customerEmail()}">user@example.com</td>
+                    <td>
+                        <div class="cell-title" th:text="${reservation.movieTitle()}">Movie title</div>
+                    </td>
+                    <td th:text="${#temporals.format(reservation.showtimeStart(), 'dd MMM yyyy, HH:mm')}">16 Jul 2026, 19:05</td>
+                    <td>
+                        <span class="badge"
+                              th:classappend="${reservation.status() == 'CONFIRMED'} ? ' badge-success' : (${reservation.status() == 'PENDING'} ? ' badge-warning' : ' badge-danger')"
+                              th:text="${reservation.status()}">CONFIRMED</span>
+                    </td>
+                    <td class="text-right value-strong"
+                        th:text="${#numbers.formatCurrency(reservation.totalAmount())}">$0.00</td>
+                    <td th:text="${#temporals.format(reservation.createdAt(), 'dd MMM yyyy, HH:mm')}">16 Jul 2026, 19:05</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="table-footer">
+            <div class="table-meta">
+                Showing <span th:text="${reservations.numberOfElements}">0</span>
+                of <span th:text="${reservations.totalElements}">0</span> records
+            </div>
+
+            <nav th:if="${reservations.totalPages > 1}" aria-label="Reservation pagination">
+                <ul class="pagination">
+                    <li>
+                        <a class="page-link"
+                           th:classappend="${reservations.first} ? ' disabled'"
+                           th:href="@{/admin/reservations(status=${status},page=${reservations.number - 1},size=${size})}">Previous</a>
+                    </li>
+
+                    <li th:each="i : ${#numbers.sequence(0, reservations.totalPages - 1)}">
+                        <a class="page-link"
+                           th:classappend="${i == reservations.number} ? ' active'"
+                           th:text="${i + 1}"
+                           th:href="@{/admin/reservations(status=${status},page=${i},size=${size})}">1</a>
+                    </li>
+
+                    <li>
+                        <a class="page-link"
+                           th:classappend="${reservations.last} ? ' disabled'"
+                           th:href="@{/admin/reservations(status=${status},page=${reservations.number + 1},size=${size})}">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </section>
+</section>
+</body>
+</html>
