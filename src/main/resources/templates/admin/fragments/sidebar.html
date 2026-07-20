@@ -13,20 +13,26 @@
 
         <nav class="sidebar-nav">
             <a class="sidebar-link"
-               th:classappend="${#strings.contains(currentUri, '/admin/showtimes/daily')} ? ' active' : ''"
+               th:classappend="${currentUri != null and #strings.contains(currentUri, '/admin/showtimes/daily')} ? ' active' : ''"
                th:href="@{/admin/showtimes/daily}">
                 Daily showtimes
             </a>
 
-            <a class="sidebar-link sidebar-link-muted" href="#">
+            <a class="sidebar-link"
+               th:classappend="${currentUri != null and #strings.contains(currentUri, '/admin/movies')} ? ' active' : ''"
+               th:href="@{/admin/movies}">
                 Movies
             </a>
 
-            <a class="sidebar-link sidebar-link-muted" href="#">
+            <a class="sidebar-link"
+               th:classappend="${currentUri != null and #strings.contains(currentUri, '/admin/revenue')} ? ' active' : ''"
+               th:href="@{/admin/revenue}">
                 Revenue
             </a>
 
-            <a class="sidebar-link sidebar-link-muted" href="#">
+            <a class="sidebar-link"
+               th:classappend="${currentUri != null and #strings.contains(currentUri, '/admin/reservations')} ? ' active' : ''"
+               th:href="@{/admin/reservations}">
                 Reservations
             </a>
         </nav>
