@@ -1,12 +1,13 @@
 package dev.eric_muganga.cinema.admin.ui;
 
+import dev.eric_muganga.cinema.admin.service.IAdminReservationCommandService;
 import dev.eric_muganga.cinema.movie.dto.MovieWithShowtimesDto;
 import dev.eric_muganga.cinema.movie.service.MovieBrowseService;
 import dev.eric_muganga.cinema.reservation.dto.AdminReservationView;
 import dev.eric_muganga.cinema.reservation.dto.PagedShowtimeReportResponse;
 import dev.eric_muganga.cinema.reservation.dto.ShowtimeReport;
-import dev.eric_muganga.cinema.reservation.service.IAdminReportService;
-import dev.eric_muganga.cinema.reservation.service.IAdminReservationQueryService;
+import dev.eric_muganga.cinema.admin.service.IAdminReportService;
+import dev.eric_muganga.cinema.admin.service.IAdminReservationQueryService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -16,7 +17,10 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -28,6 +32,7 @@ public class AdminDashboardController {
     private final IAdminReportService adminReportService;
     private final MovieBrowseService movieBrowseService;
     private final IAdminReservationQueryService adminReservationQueryService;
+    private final IAdminReservationCommandService adminReservationCommandService;
 
     @GetMapping("/admin/showtimes/daily")
     public String dailyShowtimePerformance(
@@ -133,5 +138,22 @@ public class AdminDashboardController {
         model.addAttribute("title", "Reservations");
 
         return "admin/reservations";
+    }
+
+    @GetMapping("/admin/reservations/{reservationId}")
+    public String reservationDetail(@PathVariable Long reservationId, Model model) {
+        model.addAttribute("reservation", adminReservationQueryService.getReservationDetail(reservationId));
+        model.addAttribute("title", "Reservation Detail");
+        return "admin/reservation-detail";
+    }
+
+    @PostMapping("/admin/reservations/{reservationId}/cancel")
+    public String cancelReservation(
+            @PathVariable Long reservationId,
+            RedirectAttributes redirectAttributes
+    ) {
+        var result = adminReservationCommandService.cancelReservation(reservationId);
+        redirectAttributes.addFlashAttribute("successMessage", result.message());
+        return "redirect:/admin/reservations/" + reservationId;
     }
 }
