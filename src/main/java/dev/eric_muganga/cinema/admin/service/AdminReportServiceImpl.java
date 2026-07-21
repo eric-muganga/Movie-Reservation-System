@@ -1,4 +1,4 @@
-package dev.eric_muganga.cinema.reservation.service;
+package dev.eric_muganga.cinema.admin.service;
 
 import dev.eric_muganga.cinema.common.exception.ResourceNotFoundException;
 import dev.eric_muganga.cinema.reservation.dto.PagedShowtimeReportResponse;
@@ -17,7 +17,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
-import java.time.ZoneOffset;
 import java.util.List;
 
 @Service
