@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${title}, ~{::section})}">
+<head>
+    <title>Reservation Detail</title>
+</head>
+<body>
+<section class="page-section">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Reservation Detail</h1>
+            <p class="page-subtitle">Review reservation information and available admin actions</p>
+        </div>
+
+        <a class="page-link" th:href="@{/admin/reservations}">
+            Back to reservations
+        </a>
+    </div>
+
+    <div th:if="${successMessage}" class="alert-success" th:text="${successMessage}">
+        Reservation cancelled successfully.
+    </div>
+
+    <div class="stats-grid">
+        <article class="stat-card">
+            <span class="stat-label">Reservation</span>
+            <span class="stat-value">#<span th:text="${reservation.reservationId()}">1</span></span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Status</span>
+            <span class="badge"
+                  th:classappend="${reservation.status() == 'CONFIRMED'} ? ' badge-success' : (${reservation.status() == 'PENDING'} ? ' badge-warning' : ' badge-danger')"
+                  th:text="${reservation.status()}">CONFIRMED</span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Amount</span>
+            <span class="stat-value"
+                  th:text="${#numbers.formatCurrency(reservation.totalAmount())}">$0.00</span>
+        </article>
+    </div>
+
+    <div class="detail-grid">
+        <section class="card-soft">
+            <h2 class="section-title">Reservation info</h2>
+
+            <div class="detail-list">
+                <div class="detail-row">
+                    <span class="detail-label">Customer</span>
+                    <span class="detail-value" th:text="${reservation.customerEmail()}">user@example.com</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Movie</span>
+                    <span class="detail-value" th:text="${reservation.movieTitle()}">Movie title</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Showtime</span>
+                    <span class="detail-value"
+                          th:text="${#temporals.format(reservation.showtimeStart(), 'dd MMM yyyy, HH:mm')}">16 Jul 2026, 19:05</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Created</span>
+                    <span class="detail-value"
+                          th:text="${#temporals.format(reservation.createdAt(), 'dd MMM yyyy, HH:mm')}">16 Jul 2026, 19:05</span>
+                </div>
+
+                <div class="detail-row">
+                    <span class="detail-label">Updated</span>
+                    <span class="detail-value"
+                          th:text="${#temporals.format(reservation.updatedAt(), 'dd MMM yyyy, HH:mm')}">16 Jul 2026, 19:05</span>
+                </div>
+            </div>
+        </section>
+
+        <section class="card-soft">
+            <h2 class="section-title">Seats</h2>
+
+            <div class="seat-list" th:if="${!#lists.isEmpty(reservation.seats())}">
+                <span class="seat-pill" th:each="seat : ${reservation.seats()}" th:text="${seat}">A1</span>
+            </div>
+
+            <p class="page-subtitle" th:if="${#lists.isEmpty(reservation.seats())}">
+                No seats found for this reservation.
+            </p>
+        </section>
+    </div>
+
+    <section class="card-soft">
+        <h2 class="section-title">Admin actions</h2>
+
+        <div th:if="${reservation.cancellable()}">
+            <form method="post"
+                  th:action="@{/admin/reservations/{reservationId}/cancel(reservationId=${reservation.reservationId()})}">
+                <button type="submit" class="btn-danger">Cancel reservation</button>
+            </form>
+        </div>
+
+        <p class="page-subtitle" th:if="${!reservation.cancellable()}">
+            No admin actions are available for this reservation in its current status.
+        </p>
+    </section>
+</section>
+</body>
+</html>
