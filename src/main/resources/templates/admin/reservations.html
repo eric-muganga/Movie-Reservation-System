@@ -74,11 +74,12 @@
                     <th>Status</th>
                     <th class="text-right">Amount</th>
                     <th>Created</th>
+                    <th>Actions</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${reservations.empty}">
-                    <td colspan="7" class="empty-state-cell">No reservations found.</td>
+                    <td colspan="8" class="empty-state-cell">No reservations found.</td>
                 </tr>
 
                 <tr th:each="reservation : ${reservations.content}">
@@ -91,13 +92,19 @@
                     </td>
                     <td th:text="${#temporals.format(reservation.showtimeStart(), 'dd MMM yyyy, HH:mm')}">16 Jul 2026, 19:05</td>
                     <td>
-                        <span class="badge"
-                              th:classappend="${reservation.status() == 'CONFIRMED'} ? ' badge-success' : (${reservation.status() == 'PENDING'} ? ' badge-warning' : ' badge-danger')"
-                              th:text="${reservation.status()}">CONFIRMED</span>
+        <span class="badge"
+              th:classappend="${reservation.status() == 'CONFIRMED'} ? ' badge-success' : (${reservation.status() == 'PENDING'} ? ' badge-warning' : ' badge-danger')"
+              th:text="${reservation.status()}">CONFIRMED</span>
                     </td>
                     <td class="text-right value-strong"
                         th:text="${#numbers.formatCurrency(reservation.totalAmount())}">$0.00</td>
                     <td th:text="${#temporals.format(reservation.createdAt(), 'dd MMM yyyy, HH:mm')}">16 Jul 2026, 19:05</td>
+                    <td>
+                        <a class="page-link"
+                           th:href="@{/admin/reservations/{reservationId}(reservationId=${reservation.reservationId()})}">
+                            View
+                        </a>
+                    </td>
                 </tr>
                 </tbody>
             </table>
