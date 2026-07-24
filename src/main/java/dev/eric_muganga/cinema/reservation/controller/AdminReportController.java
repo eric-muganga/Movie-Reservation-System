@@ -2,7 +2,7 @@ package dev.eric_muganga.cinema.reservation.controller;
 
 import dev.eric_muganga.cinema.reservation.dto.PagedShowtimeReportResponse;
 import dev.eric_muganga.cinema.reservation.dto.ShowtimeReport;
-import dev.eric_muganga.cinema.reservation.service.IAdminReportService;
+import dev.eric_muganga.cinema.admin.service.IAdminReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -12,7 +12,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/admin/reports")
