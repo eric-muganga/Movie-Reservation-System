@@ -40,4 +40,18 @@ public interface SeatLockRepository extends JpaRepository<SeatLock, Long> {
     Optional<SeatLock> findByShowtimeAndSeatAndStatus(Showtime showtime,
                                                       Seat seat,
                                                       SeatLockStatus status);
+
+    @Modifying
+    @Query("""
+    update SeatLock sl
+       set sl.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.EXPIRED
+     where sl.user.id = :userId
+       and sl.showtime.id = :showtimeId
+       and sl.seat.id in :seatIds
+       and sl.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.ACTIVE
+       and sl.lockExpiresAt > CURRENT_TIMESTAMP
+""")
+    int releaseActiveLocks(@Param("userId") Long userId,
+                           @Param("showtimeId") Long showtimeId,
+                           @Param("seatIds") List<Long> seatIds);
 }
