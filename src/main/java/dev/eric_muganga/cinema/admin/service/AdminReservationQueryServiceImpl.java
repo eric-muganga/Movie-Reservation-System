@@ -48,7 +48,7 @@ public class AdminReservationQueryServiceImpl implements IAdminReservationQueryS
                 reservation.getTotalAmount(),
                 reservation.getCreatedAt(),
                 reservation.getUpdatedAt(),
-                reservation.getSeats().stream()
+                reservation.getReservationSeats().stream()
                         .map(reservationSeat -> reservationSeat.getSeat().getRowLabel()
                                 + reservationSeat.getSeat().getSeatNumber())
                         .sorted()
