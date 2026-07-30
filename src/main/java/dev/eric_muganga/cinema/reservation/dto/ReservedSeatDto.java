@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 public record ReservedSeatDto(
         Long seatId,
         String rowLabel,
-        int seatnumber,
+        int seatNumber,
         BigDecimal price
 ) {
 }
