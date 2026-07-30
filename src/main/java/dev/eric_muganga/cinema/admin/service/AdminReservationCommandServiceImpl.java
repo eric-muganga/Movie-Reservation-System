@@ -33,6 +33,7 @@ public class AdminReservationCommandServiceImpl implements IAdminReservationComm
 
         reservation.setStatus(ReservationStatus.CANCELLED);
         reservation.setUpdatedAt(OffsetDateTime.now());
+        reservationRepository.save(reservation);
 
         return new AdminReservationActionResult(
                 reservation.getId(),
