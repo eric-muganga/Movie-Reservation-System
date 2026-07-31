@@ -7,48 +7,73 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
-@Table(
-        name = "reservations",
-        indexes = @Index(
-                name = "idx_reservations_user",
-                columnList = "user_id, created_at DESC"
-        )
-)
+@Table(name = "reservations")
 @Getter
 @Setter
+@Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
 public class Reservation {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "showtime_id")
+    @JoinColumn(name = "showtime_id", nullable = false)
     private Showtime showtime;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "status", nullable = false, length = 20)
-    private ReservationStatus status;
+    @Column(name = "status", nullable = false)
+    @Builder.Default
+    private ReservationStatus status = ReservationStatus.PENDING;
 
-    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_status", nullable = false)
+    @Builder.Default
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+
+    @Column(name = "payment_reference", length = 100)
+    private String paymentReference;
+
+    @Column(name = "payment_expires_at")
+    private OffsetDateTime paymentExpiresAt;
+
+    @Column(name = "paid_at")
+    private OffsetDateTime paidAt;
+
+    @Column(name = "total_amount", nullable = false)
     private BigDecimal totalAmount;
 
-    @Column(name = "created_at", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false)
     private OffsetDateTime createdAt;
 
     @Column(name = "updated_at", nullable = false)
     private OffsetDateTime updatedAt;
 
     @OneToMany(mappedBy = "reservation", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<ReservationSeat> seats = new HashSet<>();
+    @Builder.Default
+    private List<ReservationSeat> reservationSeats = new ArrayList<>();
+
+    @PrePersist
+    void onCreate() {
+        OffsetDateTime now = OffsetDateTime.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+        if (this.status == null) this.status = ReservationStatus.PENDING;
+        if (this.paymentStatus == null) this.paymentStatus = PaymentStatus.PENDING;
+    }
+
+    @PreUpdate
+    void onUpdate() {
+        this.updatedAt = OffsetDateTime.now();
+    }
 }
