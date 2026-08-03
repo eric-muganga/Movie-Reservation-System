@@ -40,7 +40,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
-import java.util.Set;
+import java.util.List;
 
 @SpringBootTest(classes = CinemaApplication.class)
 @ActiveProfiles("test")
@@ -175,7 +175,7 @@ class AdminReservationFlowIntegrationTest {
         rs3.setSeat(seatA3);
         rs3.setPrice(new BigDecimal("12.50"));
 
-        confirmedReservation.setSeats(Set.of(rs1, rs2, rs3));
+        confirmedReservation.setReservationSeats(List.of(rs1, rs2, rs3));
         confirmedReservation = reservationRepository.save(confirmedReservation);
 
         cancelledReservation = new Reservation();

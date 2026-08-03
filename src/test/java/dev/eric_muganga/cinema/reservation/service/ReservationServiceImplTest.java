@@ -3,7 +3,9 @@ package dev.eric_muganga.cinema.reservation.service;
 import dev.eric_muganga.cinema.common.exception.ResourceNotFoundException;
 import dev.eric_muganga.cinema.common.exception.SeatConflictException;
 import dev.eric_muganga.cinema.reservation.dto.ReservationResult;
+import dev.eric_muganga.cinema.reservation.entity.PaymentStatus;
 import dev.eric_muganga.cinema.reservation.entity.Reservation;
+import dev.eric_muganga.cinema.reservation.entity.ReservationSeat;
 import dev.eric_muganga.cinema.reservation.entity.ReservationStatus;
 import dev.eric_muganga.cinema.reservation.entity.SeatLock;
 import dev.eric_muganga.cinema.reservation.entity.SeatLockStatus;
@@ -33,7 +35,8 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-public class ReservationServiceImplTest {
+class ReservationServiceImplTest {
+
     @Mock
     private ReservationRepository reservationRepository;
     @Mock
@@ -51,13 +54,10 @@ public class ReservationServiceImplTest {
     private ReservationServiceImpl reservationService;
 
     @Test
-    void reserveNow_availableSeats_createLocksAndConfirmedReservation() {
-        // Arrange
+    void startCheckout_availableSeats_createLocksAndConfirmedReservation() {
         String auth0Sub = "auth0|user-1";
         Long showtimeId = 1L;
         List<Long> seatIds = List.of(1L, 2L);
-
-        OffsetDateTime now = OffsetDateTime.now().plusMinutes(1); // showtime in future
 
         User user = new User();
         user.setId(10L);
@@ -73,8 +73,8 @@ public class ReservationServiceImplTest {
         Showtime showtime = Showtime.builder()
                 .id(showtimeId)
                 .auditorium(auditorium)
-                .startTime(now.plusHours(1))   // definitely in future
-                .endTime(now.plusHours(3))
+                .startTime(OffsetDateTime.now().plusHours(1))
+                .endTime(OffsetDateTime.now().plusHours(3))
                 .basePrice(BigDecimal.valueOf(12.50))
                 .build();
 
@@ -97,59 +97,34 @@ public class ReservationServiceImplTest {
         when(userRepository.findByAuth0Sub(auth0Sub)).thenReturn(Optional.of(user));
         when(showtimeRepository.findById(showtimeId)).thenReturn(Optional.of(showtime));
         when(seatRepository.findAllById(seatIds)).thenReturn(List.of(seat1, seat2));
+        when(reservationSeatRepository.findReservedSeatIdsForShowtime(showtimeId, seatIds)).thenReturn(List.of());
+        when(seatLockRepository.findActiveLocksForShowtime(eq(showtimeId), any())).thenReturn(List.of());
+        when(reservationRepository.save(any(Reservation.class))).thenAnswer(invocation -> {
+            Reservation r = invocation.getArgument(0);
+            r.setId(999L);
+            return r;
+        });
+        when(reservationSeatRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(seatLockRepository.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
 
-        // AVAILABLE: no reserved seats, no active locks
-        when(reservationSeatRepository.findReservedSeatIdsForShowtime(showtimeId, seatIds))
-                .thenReturn(List.of());
-        when(seatLockRepository.findActiveLocksForShowtime(eq(showtimeId), any()))
-                .thenReturn(List.of());
+        ReservationResult result = reservationService.startCheckout(auth0Sub, showtimeId, seatIds);
 
-        // Reservation persistence: echo back with id
-        ArgumentCaptor<Reservation> reservationCaptor = ArgumentCaptor.forClass(Reservation.class);
-        when(reservationRepository.save(any(Reservation.class)))
-                .thenAnswer(invocation -> {
-                    Reservation r = invocation.getArgument(0);
-                    r.setId(999L);
-                    return r;
-                });
-
-        // Act
-        ReservationResult result = reservationService.reserveNow(auth0Sub, showtimeId, seatIds);
-
-        // Assert: result
         assertThat(result.reservationId()).isEqualTo(999L);
         assertThat(result.status()).isEqualTo("CONFIRMED");
         assertThat(result.showtimeId()).isEqualTo(showtimeId);
         assertThat(result.seats()).hasSize(2);
-        assertThat(result.totalAmount())
-                .isEqualTo(BigDecimal.valueOf(12.50).multiply(BigDecimal.valueOf(2)));
+        assertThat(result.totalAmount()).isEqualTo(BigDecimal.valueOf(12.50).multiply(BigDecimal.valueOf(2)));
 
-        // Assert: interactions reflect AVAILABLE → LOCKED → BOOKED
-        // expireLocks called
         verify(seatLockRepository).expireLocks(any());
-
-        // reserved-seat check called
-        verify(reservationSeatRepository)
-                .findReservedSeatIdsForShowtime(showtimeId, seatIds);
-
-        // active lock check called
-        verify(seatLockRepository)
-                .findActiveLocksForShowtime(eq(showtimeId), any());
-
-        // locks saved then marked CONSUMED
-        ArgumentCaptor<List<SeatLock>> lockCaptor = ArgumentCaptor.forClass(List.class);
-        verify(seatLockRepository, times(2)).saveAll(lockCaptor.capture());
-
-        // reservation seats persisted
+        verify(reservationSeatRepository).findReservedSeatIdsForShowtime(showtimeId, seatIds);
+        verify(seatLockRepository).findActiveLocksForShowtime(eq(showtimeId), any());
+        verify(seatLockRepository, times(2)).saveAll(anyList());
         verify(reservationSeatRepository).saveAll(anyList());
-        verify(reservationRepository).save(reservationCaptor.capture());
-
-        Reservation persisted = reservationCaptor.getValue();
-        assertThat(persisted.getStatus()).isEqualTo(ReservationStatus.CONFIRMED);
+        verify(reservationRepository).save(any(Reservation.class));
     }
 
     @Test
-    void reserveNow_bookedSeats_throwSeatConflictException() {
+    void startCheckout_bookedSeats_throwSeatConflictException() {
         String auth0Sub = "auth0|user-1";
         Long showtimeId = 1L;
         List<Long> seatIds = List.of(1L, 2L);
@@ -179,22 +154,18 @@ public class ReservationServiceImplTest {
                 Seat.builder().id(1L).auditorium(auditorium).rowLabel("A").seatNumber(1).seatType("STANDARD").build(),
                 Seat.builder().id(2L).auditorium(auditorium).rowLabel("A").seatNumber(2).seatType("STANDARD").build()
         ));
+        when(reservationSeatRepository.findReservedSeatIdsForShowtime(showtimeId, seatIds)).thenReturn(List.of(1L));
 
-        // BOOKED: reserved-seat repository reports seats as already reserved
-        when(reservationSeatRepository.findReservedSeatIdsForShowtime(showtimeId, seatIds))
-                .thenReturn(List.of(1L));
-
-        assertThatThrownBy(() -> reservationService.reserveNow(auth0Sub, showtimeId, seatIds))
+        assertThatThrownBy(() -> reservationService.startCheckout(auth0Sub, showtimeId, seatIds))
                 .isInstanceOf(SeatConflictException.class)
                 .hasMessageContaining("already reserved");
 
-        // confirm we never go on to create locks or reservations
         verify(seatLockRepository, never()).saveAll(anyList());
         verify(reservationRepository, never()).save(any());
     }
 
     @Test
-    void reserveNow_seatsLockedByOtherUser_throwSeatConflictException() {
+    void startCheckout_seatsLockedByOtherUser_throwSeatConflictException() {
         String auth0Sub = "auth0|user-1";
         Long showtimeId = 1L;
         List<Long> seatIds = List.of(1L);
@@ -233,12 +204,8 @@ public class ReservationServiceImplTest {
         when(userRepository.findByAuth0Sub(auth0Sub)).thenReturn(Optional.of(currentUser));
         when(showtimeRepository.findById(showtimeId)).thenReturn(Optional.of(showtime));
         when(seatRepository.findAllById(seatIds)).thenReturn(List.of(seat));
+        when(reservationSeatRepository.findReservedSeatIdsForShowtime(showtimeId, seatIds)).thenReturn(List.of());
 
-        // AVAILABLE in terms of booked seats
-        when(reservationSeatRepository.findReservedSeatIdsForShowtime(showtimeId, seatIds))
-                .thenReturn(List.of());
-
-        // LOCKED by other user
         SeatLock otherLock = SeatLock.builder()
                 .id(1L)
                 .user(otherUser)
@@ -249,10 +216,9 @@ public class ReservationServiceImplTest {
                 .status(SeatLockStatus.ACTIVE)
                 .build();
 
-        when(seatLockRepository.findActiveLocksForShowtime(eq(showtimeId), any()))
-                .thenReturn(List.of(otherLock));
+        when(seatLockRepository.findActiveLocksForShowtime(eq(showtimeId), any())).thenReturn(List.of(otherLock));
 
-        assertThatThrownBy(() -> reservationService.reserveNow(auth0Sub, showtimeId, seatIds))
+        assertThatThrownBy(() -> reservationService.startCheckout(auth0Sub, showtimeId, seatIds))
                 .isInstanceOf(SeatConflictException.class)
                 .hasMessageContaining("locked");
 
@@ -261,13 +227,12 @@ public class ReservationServiceImplTest {
     }
 
     @Test
-    void reserveNow_missingUser_throwsResourceNotFound() {
+    void startCheckout_missingUser_throwsResourceNotFound() {
         when(userRepository.findByAuth0Sub("missing")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> reservationService.reserveNow("missing", 1L, List.of(1L)))
+        assertThatThrownBy(() -> reservationService.startCheckout("missing", 1L, List.of(1L)))
                 .isInstanceOf(ResourceNotFoundException.class);
 
-        verifyNoInteractions(showtimeRepository, seatRepository, reservationSeatRepository,
-                seatLockRepository, reservationRepository);
+        verifyNoInteractions(showtimeRepository, seatRepository, reservationSeatRepository, seatLockRepository, reservationRepository);
     }
 }

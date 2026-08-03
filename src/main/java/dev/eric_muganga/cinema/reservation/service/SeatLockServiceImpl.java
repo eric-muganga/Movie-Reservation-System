@@ -52,7 +52,9 @@ public class SeatLockServiceImpl implements ISeatLockService {
         }
 
         List<Seat> seats = seatRepository.findAllById(seatIds);
-        // TODO: re-enable strict checks once integration tests use real seat IDs
+        if (seats.size() != seatIds.size()) {
+            throw new IllegalArgumentException("One or more seatIds are invalid");
+        }
 
         Long auditoriumId = showtime.getAuditorium().getId();
         boolean allInSameAuditorium = seats.stream()
@@ -63,10 +65,8 @@ public class SeatLockServiceImpl implements ISeatLockService {
                     "All seats must belong to the same auditorium as the showtime");
         }
 
-        // Expire stale locks
         seatLockRepository.expireLocks(now);
 
-        // Check for active locks by others
         List<SeatLock> activeLocks = seatLockRepository.findActiveLocksForShowtime(showtimeId, now);
 
         Set<Long> lockedSeatIdsByOthers = activeLocks.stream()
@@ -74,15 +74,16 @@ public class SeatLockServiceImpl implements ISeatLockService {
                 .map(lock -> lock.getSeat().getId())
                 .collect(Collectors.toSet());
 
-        Set<Long> requestedSeatIds = new HashSet<>(seatIds);
-        requestedSeatIds.retainAll(lockedSeatIdsByOthers);
+        Set<Long> conflictingSeatIds = new HashSet<>(seatIds);
+        conflictingSeatIds.retainAll(lockedSeatIdsByOthers);
 
-        if (!requestedSeatIds.isEmpty()) {
+        if (!conflictingSeatIds.isEmpty()) {
             throw new SeatConflictException(
-                    "Some seats are currently locked (LOCKED) by another user: " + requestedSeatIds);
+                    "Some seats are currently locked (LOCKED) by another user: " + conflictingSeatIds);
         }
 
-        // Create ACTIVE locks for this user
+        seatLockRepository.releaseActiveLocks(user.getId(), showtimeId, seatIds);
+
         OffsetDateTime expiresAt = now.plusMinutes(LOCK_MINUTES);
         List<SeatLock> newLocks = seats.stream()
                 .map(seat -> SeatLock.builder()
@@ -97,4 +98,26 @@ public class SeatLockServiceImpl implements ISeatLockService {
 
         seatLockRepository.saveAll(newLocks);
     }
+
+    @Override
+    @Transactional
+    public void unlockSeats(String auth0Sub, Long showtimeId, List<Long> seatIds) {
+        if (seatIds == null || seatIds.isEmpty()) {
+            return;
+        }
+
+        User user = userRepository.findByAuth0Sub(auth0Sub)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "User not found for auth0Sub: " + auth0Sub));
+
+        seatLockRepository.releaseActiveLocks(user.getId(), showtimeId, seatIds);
+    }
+
+    @Override
+    @Transactional
+    public void expireStaleLocks() {
+        seatLockRepository.expireLocks(OffsetDateTime.now());
+    }
 }
+
+
