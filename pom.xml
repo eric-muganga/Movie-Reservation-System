@@ -18,13 +18,17 @@
 		<license/>
 	</licenses>
 	<developers>
-		<developer/>
+		<developer>
+			<id>eric-muganga</id>
+			<name>Eric Muganga</name>
+			<url>https://github.com/eric-muganga</url>
+		</developer>
 	</developers>
 	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
+		<connection>scm:git:https://github.com/eric-muganga/movie-reservation-system.git</connection>
+		<developerConnection>scm:git:ssh://git@github.com/eric-muganga/movie-reservation-system.git</developerConnection>
+		<tag>HEAD</tag>
+		<url>https://github.com/eric-muganga/movie-reservation-system</url>
 	</scm>
 	<properties>
 		<java.version>21</java.version>
