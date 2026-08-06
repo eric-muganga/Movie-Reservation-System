@@ -66,7 +66,7 @@ public class AdminDashboardController {
         return "admin/daily-showtimes";
     }
 
-    @GetMapping("/admin/movies")
+    @GetMapping("/admin/showtimes/movies")
     public String movies(
             @RequestParam(name = "date", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
@@ -85,7 +85,7 @@ public class AdminDashboardController {
         model.addAttribute("totalShowtimes", totalShowtimes);
         model.addAttribute("title", "Movies");
 
-        return "admin/movies";
+        return "admin/showtimes-movies";
     }
 
     @GetMapping("/admin/revenue")
