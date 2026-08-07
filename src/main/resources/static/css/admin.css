@@ -335,6 +335,58 @@ select {
     box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
 }
 
+/* Movie genre multi-select */
+.genre-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.75rem;
+    margin-top: 0.2rem;
+}
+
+.genre-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.65rem;
+    min-height: 48px;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--surface-muted);
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 600;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.genre-chip:hover {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+}
+
+/* Override the generic .form-group input styles for checkboxes */
+.genre-chip input[type="checkbox"] {
+    width: 20px;
+    min-width: 20px;
+    height: 20px;
+    min-height: 20px;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--primary);
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.genre-chip:has(input[type="checkbox"]:checked) {
+    border-color: var(--primary);
+    background: var(--primary-soft);
+    color: var(--primary-dark);
+}
+
+.genre-chip:has(input[type="checkbox"]:focus-visible) {
+    outline: 3px solid rgba(37, 99, 235, 0.22);
+    outline-offset: 2px;
+}
+
 .form-action {
     justify-content: flex-end;
 }
