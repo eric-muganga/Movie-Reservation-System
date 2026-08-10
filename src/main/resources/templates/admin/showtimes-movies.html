@@ -2,21 +2,17 @@
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
       th:replace="~{admin/layout :: layout(${title}, ~{::section})}">
 <head>
-    <title>Movies</title>
+    <title>Movies & Showtimes</title>
 </head>
 <body>
 <section class="page-section">
     <div class="page-header">
         <div>
-            <h1 class="page-title">Movies</h1>
+            <h1 class="page-title">Movies & Showtimes</h1>
             <p class="page-subtitle">
-                Manage movies and scheduled showtimes for
+                Browse movies and scheduled showtimes for
                 <strong th:text="${businessDate}">2026-07-16</strong>
             </p>
-        </div>
-
-        <div class="page-actions">
-            <a class="btn-primary" th:href="@{/admin/movies/new}">Create movie</a>
         </div>
     </div>
 
@@ -38,7 +34,7 @@
     </div>
 
     <section class="card-soft form-card">
-        <form class="filters-form filters-form-single" method="get" th:action="@{/admin/movies}">
+        <form class="filters-form filters-form-single" method="get" th:action="@{/admin/showtimes/movies}">
             <div class="form-group">
                 <label for="date">Date</label>
                 <input id="date" name="date" type="date" th:value="${businessDate}">
@@ -58,35 +54,34 @@
                     <th>Movie</th>
                     <th>Genres</th>
                     <th>Poster</th>
-                    <th class="text-right">Duration</th>
-                    <th>Created</th>
-                    <th>Actions</th>
+                    <th class="text-right">Showtimes</th>
+                    <th>Schedule</th>
                 </tr>
                 </thead>
                 <tbody>
                 <tr th:if="${#lists.isEmpty(movies)}">
-                    <td colspan="6" class="empty-state-cell">No movies found.</td>
+                    <td colspan="5" class="empty-state-cell">No movies found for this date.</td>
                 </tr>
 
                 <tr th:each="movie : ${movies}">
                     <td>
                         <div class="cell-title" th:text="${movie.title()}">Movie title</div>
-                        <div class="cell-subtitle">#<span th:text="${movie.id()}">1</span></div>
+                        <div class="cell-subtitle">#<span th:text="${movie.movieId()}">1</span></div>
                     </td>
 
                     <td>
                         <div class="tag-list" th:if="${movie.genres() != null and !#lists.isEmpty(movie.genres())}">
-            <span class="badge badge-info"
-                  th:each="genre : ${movie.genres()}"
-                  th:text="${genre}">Sci-Fi</span>
+                            <span class="badge badge-info"
+                                  th:each="genre : ${movie.genres()}"
+                                  th:text="${genre}">Sci-Fi</span>
                         </div>
                         <span th:if="${movie.genres() == null or #lists.isEmpty(movie.genres())}"
                               class="cell-subtitle">No genres</span>
                     </td>
 
                     <td>
-        <span th:if="${movie.posterUrl() == null or #strings.isEmpty(movie.posterUrl())}"
-              class="cell-subtitle">No poster</span>
+                        <span th:if="${movie.posterUrl() == null or #strings.isEmpty(movie.posterUrl())}"
+                              class="cell-subtitle">No poster</span>
                         <a th:if="${movie.posterUrl() != null and !#strings.isEmpty(movie.posterUrl())}"
                            th:href="${movie.posterUrl()}"
                            target="_blank"
@@ -94,29 +89,18 @@
                            class="poster-link">Open poster</a>
                     </td>
 
-                    <td class="text-right value-strong"
-                        th:text="${movie.durationMinutes() + ' min'}">0 min</td>
+                    <td class="text-right value-strong" th:text="${movie.showtimes().size()}">0</td>
 
                     <td>
-        <span class="cell-subtitle"
-              th:text="${#temporals.format(movie.createdAt(), 'yyyy-MM-dd HH:mm')}">
-            Created at
-        </span>
-                    </td>
-
-                    <td>
-                        <div class="action-group">
-                            <a class="btn-secondary"
-                               th:href="@{/admin/movies/{id}/edit(id=${movie.id()})}">Edit</a>
-                            <form th:action="@{/admin/movies/{id}/delete(id=${movie.id()})}"
-                                  method="post"
-                                  style="display:inline;">
-                                <button type="submit" class="btn-danger"
-                                        onclick="return confirm('Delete this movie?')">
-                                    Delete
-                                </button>
-                            </form>
+                        <div class="showtime-list" th:if="${!#lists.isEmpty(movie.showtimes())}">
+                            <span class="badge badge-info"
+                                  th:each="showtime : ${movie.showtimes()}"
+                                  th:text="${#temporals.format(showtime.startTime(), 'HH:mm')} + ' - ' + ${#temporals.format(showtime.endTime(), 'HH:mm')}">
+                                18:00 - 20:00
+                            </span>
                         </div>
+                        <span th:if="${#lists.isEmpty(movie.showtimes())}"
+                              class="cell-subtitle">No scheduled showtimes</span>
                     </td>
                 </tr>
                 </tbody>

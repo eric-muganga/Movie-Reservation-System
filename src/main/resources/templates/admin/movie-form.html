@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${title}, ~{::section})}">
+<head>
+    <title th:text="${title}">Movie Form</title>
+</head>
+<body>
+<section class="page-section">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title" th:text="${title}">Movie Form</h1>
+            <p class="page-subtitle">
+                Configure movie details, poster, duration, and genres.
+            </p>
+        </div>
+    </div>
+
+    <section class="card-soft form-card">
+        <form th:action="${movieId == null} ? @{/admin/movies} : @{/admin/movies/{id}(id=${movieId})}"
+              th:object="${movieForm}"
+              method="post"
+              class="form-vertical">
+
+            <div class="form-group">
+                <label for="title">Title</label>
+                <input id="title" type="text" th:field="*{title}" class="input-text" />
+                <div class="field-error" th:if="${#fields.hasErrors('title')}" th:errors="*{title}"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <textarea id="description" th:field="*{description}" class="input-textarea"></textarea>
+                <div class="field-error" th:if="${#fields.hasErrors('description')}" th:errors="*{description}"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="posterUrl">Poster URL</label>
+                <input id="posterUrl" type="text" th:field="*{posterUrl}" class="input-text" />
+            </div>
+
+            <div class="form-group">
+                <label for="durationMinutes">Duration (minutes)</label>
+                <input id="durationMinutes" type="number" th:field="*{durationMinutes}" class="input-text" />
+                <div class="field-error" th:if="${#fields.hasErrors('durationMinutes')}" th:errors="*{durationMinutes}"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Genres</label>
+                <div class="genre-grid">
+                    <label class="genre-chip" th:each="genre : ${genres}">
+                        <input type="checkbox" th:field="*{genreIds}" th:value="${genre.id}" />
+                        <span th:text="${genre.name}">Sci-Fi</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn-primary"
+                        th:text="${movieId == null} ? 'Create movie' : 'Save changes'">
+                    Save
+                </button>
+                <a th:href="@{/admin/movies}" class="btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </section>
+</section>
+</body>
+</html>
