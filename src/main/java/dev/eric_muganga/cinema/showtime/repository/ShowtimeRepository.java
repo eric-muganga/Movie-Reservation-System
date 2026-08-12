@@ -11,23 +11,35 @@ import java.util.List;
 
 @Repository
 public interface ShowtimeRepository extends JpaRepository<Showtime, Long> {
-    // All showtimes for a movie in a time range (e.g. one day)
     List<Showtime> findByMovieIdAndStartTimeBetween(
             Long movieId,
             OffsetDateTime from,
             OffsetDateTime to
     );
 
-    // All showtimes in a time range
     List<Showtime> findByStartTimeBetween(
             OffsetDateTime from,
             OffsetDateTime to
     );
 
-    // Optional: paged variant for UIs
     Page<Showtime> findByStartTimeBetween(
             OffsetDateTime from,
             OffsetDateTime to,
             Pageable pageable
+    );
+
+    List<Showtime> findAllByOrderByStartTimeAsc();
+
+    boolean existsByAuditoriumIdAndStartTimeLessThanAndEndTimeGreaterThan(
+            Long auditoriumId,
+            OffsetDateTime endTime,
+            OffsetDateTime startTime
+    );
+
+    boolean existsByAuditoriumIdAndIdNotAndStartTimeLessThanAndEndTimeGreaterThan(
+            Long auditoriumId,
+            Long showtimeId,
+            OffsetDateTime endTime,
+            OffsetDateTime startTime
     );
 }
