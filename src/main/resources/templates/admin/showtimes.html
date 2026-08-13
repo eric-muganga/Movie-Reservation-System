@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{admin/layout :: layout(${title}, ~{::section})}">
+<head>
+    <title>Showtimes</title>
+</head>
+<body>
+<section class="page-section">
+    <div class="page-header">
+        <div>
+            <h1 class="page-title">Showtimes</h1>
+            <p class="page-subtitle">
+                Schedule and monitor movie screenings across auditoriums.
+            </p>
+        </div>
+
+        <div class="page-actions">
+            <a class="btn-primary" th:href="@{/admin/showtimes/new}">
+                Schedule showtime
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-grid">
+        <article class="stat-card">
+            <span class="stat-label">Scheduled showtimes</span>
+            <span class="stat-value" th:text="${totalShowtimes}">0</span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Movies scheduled</span>
+            <span class="stat-value" th:text="${scheduledMovies}">0</span>
+        </article>
+
+        <article class="stat-card">
+            <span class="stat-label">Auditoriums in use</span>
+            <span class="stat-value" th:text="${auditoriumsInUse}">0</span>
+        </article>
+    </div>
+
+    <section class="table-card">
+        <div class="table-wrap">
+            <table>
+                <thead>
+                <tr>
+                    <th>Movie</th>
+                    <th>Auditorium</th>
+                    <th>Start time</th>
+                    <th>End time</th>
+                    <th>Status</th>
+                    <th class="text-right">Base price</th>
+                    <th>Actions</th>
+                </tr>
+                </thead>
+
+                <tbody>
+                <tr th:if="${#lists.isEmpty(showtimes)}">
+                    <td colspan="7" class="empty-state-cell">
+                        No showtimes scheduled yet.
+                    </td>
+                </tr>
+
+                <tr th:each="showtime : ${showtimes}">
+                    <td>
+                        <div class="cell-title"
+                             th:text="${showtime.movieTitle()}">
+                            Movie title
+                        </div>
+                        <div class="cell-subtitle">
+                            Movie #<span th:text="${showtime.movieId()}">1</span>
+                        </div>
+                    </td>
+
+                    <td>
+                        <div class="cell-title"
+                             th:text="${showtime.auditoriumName()}">
+                            Auditorium name
+                        </div>
+                        <div class="cell-subtitle">
+                            Auditorium #<span th:text="${showtime.auditoriumId()}">1</span>
+                        </div>
+                    </td>
+
+                    <td>
+                        <span class="value-strong"
+                              th:text="${#temporals.format(showtime.startTime(), 'yyyy-MM-dd HH:mm')}">
+                            2026-08-12 19:00
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="cell-subtitle"
+                              th:text="${#temporals.format(showtime.endTime(), 'yyyy-MM-dd HH:mm')}">
+                            2026-08-12 21:00
+                        </span>
+                    </td>
+
+                    <td>
+                        <span class="badge badge-info"
+                              th:text="${showtime.status()}">
+                            SCHEDULED
+                        </span>
+                    </td>
+
+                    <td class="text-right value-strong"
+                        th:text="${#numbers.formatDecimal(showtime.basePrice(), 1, 2)}">
+                        0.00
+                    </td>
+
+                    <td>
+                        <div class="action-group">
+                            <a class="btn-secondary"
+                               th:href="@{/admin/showtimes/{id}/edit(id=${showtime.id()})}">
+                                Edit
+                            </a>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+</section>
+</body>
+</html>
