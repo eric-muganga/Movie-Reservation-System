@@ -19,6 +19,13 @@
             </a>
 
             <a class="sidebar-link"
+               th:classappend="${currentUri != null and #strings.contains(currentUri, '/admin/showtimes')} ? ' active' : ''"
+               th:href="@{/admin/showtimes/daily}">
+                Showtimes
+            </a>
+
+
+            <a class="sidebar-link"
                th:classappend="${currentUri != null and #strings.contains(currentUri, '/admin/movies')} ? ' active' : ''"
                th:href="@{/admin/movies}">
                 Movies

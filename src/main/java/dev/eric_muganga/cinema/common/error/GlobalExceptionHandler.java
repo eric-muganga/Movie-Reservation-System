@@ -2,6 +2,7 @@ package dev.eric_muganga.cinema.common.error;
 
 import dev.eric_muganga.cinema.common.exception.ResourceNotFoundException;
 import dev.eric_muganga.cinema.common.exception.SeatConflictException;
+import dev.eric_muganga.cinema.common.exception.ShowtimeConflictException;
 import jakarta.persistence.EntityNotFoundException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -45,10 +46,11 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(buildError(status, message, request), status);
     }
 
-    // 409 for seat conflicts or similar business rules
-    @ExceptionHandler(SeatConflictException.class)
-    public ResponseEntity<ApiErrorResponse> handleSeatConflict(SeatConflictException ex,
-                                                               WebRequest request) {
+    @ExceptionHandler({SeatConflictException.class, ShowtimeConflictException.class})
+    public ResponseEntity<ApiErrorResponse> handleConflict(
+            RuntimeException ex,
+            WebRequest request
+    ) {
         HttpStatus status = HttpStatus.CONFLICT;
         return new ResponseEntity<>(buildError(status, ex.getMessage(), request), status);
     }
