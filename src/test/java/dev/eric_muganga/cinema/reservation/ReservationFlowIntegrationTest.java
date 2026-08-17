@@ -36,10 +36,11 @@ class ReservationFlowIntegrationTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("cinema_db_test")
-            .withUsername("cinema")
-            .withPassword("cinema");
+    static PostgreSQLContainer<?> postgres =
+            new PostgreSQLContainer<>("postgres:16-alpine")
+                    .withDatabaseName("cinema_db_test")
+                    .withUsername("cinema")
+                    .withPassword("cinema");
 
     @Autowired
     private MockMvc mockMvc;
@@ -47,18 +48,132 @@ class ReservationFlowIntegrationTest {
     @Autowired
     private UserRepository userRepository;
 
-    @Autowired
-    private SeatLockRepository seatLockRepository;
-
-    private static final String DEBUG_USER = "auth0|test-user-123";
+    private static final String USER_1 = "auth0|payment-user-1";
+    private static final String USER_2 = "auth0|payment-user-2";
     private static final long SHOWTIME_ID = 3L;
 
     @BeforeAll
     void seedUsers() {
-        seedUser(DEBUG_USER);
-        seedUser("auth0|lock-user-1");
-        seedUser("auth0|lock-user-2");
-        seedUser("auth0|lock-user-3");
+        seedUser(USER_1);
+        seedUser(USER_2);
+    }
+
+    @Test
+    void startCheckout_createsPendingReservation() throws Exception {
+        mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", USER_1)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(seatsRequestBody(SHOWTIME_ID, 7)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andExpect(jsonPath("$.showtimeId").value((int) SHOWTIME_ID))
+                .andExpect(jsonPath("$.seats", hasSize(1)))
+                .andExpect(jsonPath("$.totalAmount", greaterThan(0.0)));
+    }
+
+    @Test
+    void confirmPayment_confirmsPendingReservation() throws Exception {
+        long reservationId = createPendingReservation(USER_1, 8);
+
+        mockMvc.perform(post("/api/reservations/{reservationId}/confirm-payment", reservationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "paymentReference": "test-payment-success-001"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.showtimeId").value((int) SHOWTIME_ID));
+    }
+
+    @Test
+    void confirmedReservation_blocksAnotherReservationForSameSeat() throws Exception {
+        long reservationId = createPendingReservation(USER_1, 9);
+
+        mockMvc.perform(post("/api/reservations/{reservationId}/confirm-payment", reservationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "paymentReference": "test-payment-success-002"
+                                }
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("CONFIRMED"));
+
+        mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", USER_2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(seatsRequestBody(SHOWTIME_ID, 9)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error", containsString("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("already reserved")));
+    }
+
+    @Test
+    void pendingReservation_blocksAnotherUserUntilPaymentCompletesOrFails() throws Exception {
+        createPendingReservation(USER_1, 10);
+
+        mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", USER_2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(seatsRequestBody(SHOWTIME_ID, 10)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error", containsString("Conflict")))
+                .andExpect(jsonPath("$.message", containsString("locked")));
+    }
+
+    @Test
+    void failedPayment_cancelsReservationAndReleasesSeats() throws Exception {
+        long reservationId = createPendingReservation(USER_1, 11);
+
+        mockMvc.perform(post("/api/reservations/{reservationId}/fail-payment", reservationId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "reason": "test-payment-failed-001"
+                                }
+                                """))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", USER_2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(seatsRequestBody(SHOWTIME_ID, 11)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"));
+    }
+
+    @Test
+    void cancelPendingReservation_releasesSeats() throws Exception {
+        long reservationId = createPendingReservation(USER_1, 12);
+
+        mockMvc.perform(delete("/api/reservations/{reservationId}", reservationId)
+                        .header("X-Debug-User", USER_1))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", USER_2)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(seatsRequestBody(SHOWTIME_ID, 12)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"));
+    }
+
+    private long createPendingReservation(String auth0Sub, long seatId) throws Exception {
+        String responseBody = mockMvc.perform(post("/api/reservations")
+                        .header("X-Debug-User", auth0Sub)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(seatsRequestBody(SHOWTIME_ID, seatId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("PENDING"))
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        return extractReservationId(responseBody);
     }
 
     private void seedUser(String auth0Sub) {
@@ -66,7 +181,7 @@ class ReservationFlowIntegrationTest {
             User user = new User();
             user.setAuth0Sub(auth0Sub);
             user.setEmail(auth0Sub + "@example.com");
-            user.setFullName("Debug " + auth0Sub);
+            user.setFullName("Test " + auth0Sub);
             user.setCreatedAt(OffsetDateTime.now());
             user.setUpdatedAt(OffsetDateTime.now());
             return userRepository.save(user);
@@ -74,144 +189,36 @@ class ReservationFlowIntegrationTest {
     }
 
     private String seatsRequestBody(long showtimeId, long... seatIds) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n  \"showtimeId\": ").append(showtimeId).append(",\n  \"seatIds\": [");
-        for (int i = 0; i < seatIds.length; i++) {
-            if (i > 0) sb.append(", ");
-            sb.append(seatIds[i]);
+        StringBuilder body = new StringBuilder();
+        body.append("{\"showtimeId\":").append(showtimeId).append(",\"seatIds\":[");
+
+        for (int index = 0; index < seatIds.length; index++) {
+            if (index > 0) {
+                body.append(",");
+            }
+
+            body.append(seatIds[index]);
         }
-        sb.append("]\n}");
-        return sb.toString();
-    }
 
-    @Test
-    @Order(1)
-    void reserveNow_createsConfirmedReservation() throws Exception {
-        mockMvc.perform(post("/api/reservations")
-                        .header("X-Debug-User", DEBUG_USER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(seatsRequestBody(SHOWTIME_ID, 1, 2, 3)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CONFIRMED"))
-                .andExpect(jsonPath("$.showtimeId").value((int) SHOWTIME_ID))
-                .andExpect(jsonPath("$.seats", hasSize(3)))
-                .andExpect(jsonPath("$.totalAmount", greaterThan(0.0)));
-    }
-
-    @Test
-    @Order(2)
-    void reserveNow_onAlreadyReservedSeats_returns409Conflict() throws Exception {
-        mockMvc.perform(post("/api/reservations")
-                        .header("X-Debug-User", DEBUG_USER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(seatsRequestBody(SHOWTIME_ID, 1, 2, 3)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.error", containsString("Conflict")))
-                .andExpect(jsonPath("$.message", containsString("already reserved")));
-    }
-
-    @Test
-    @Order(3)
-    void cancelReservation_marksReservationCancelled_andFreesSeats() throws Exception {
-        String reservationJson = mockMvc.perform(post("/api/reservations")
-                        .header("X-Debug-User", DEBUG_USER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(seatsRequestBody(SHOWTIME_ID, 4, 5)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CONFIRMED"))
-                .andExpect(jsonPath("$.seats", hasSize(2)))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        long reservationId = extractReservationId(reservationJson);
-
-        mockMvc.perform(delete("/api/reservations/{reservationId}", reservationId)
-                        .header("X-Debug-User", DEBUG_USER))
-                .andExpect(status().isNoContent());
-
-        mockMvc.perform(get("/api/showtimes/{id}/seating", SHOWTIME_ID)
-                        .header("X-Debug-User", DEBUG_USER))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.rows", not(empty())));
-    }
-
-    @Test
-    @Order(4)
-    void reserveNow_onSeatsLockedByOtherUser_returns409Conflict() throws Exception {
-        String otherUser = "auth0|lock-user-1";
-
-        mockMvc.perform(post("/api/reservations")
-                        .header("X-Debug-User", otherUser)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(seatsRequestBody(SHOWTIME_ID, 1, 2)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.error", containsString("Conflict")))
-                .andExpect(jsonPath("$.message",
-                        anyOf(containsString("already reserved"), containsString("locked"))));
-
-        mockMvc.perform(post("/api/reservations")
-                        .header("X-Debug-User", DEBUG_USER)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(seatsRequestBody(SHOWTIME_ID, 1, 2)))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.error", containsString("Conflict")))
-                .andExpect(jsonPath("$.message",
-                        anyOf(containsString("already reserved"), containsString("locked"))));
-    }
-
-    @Test
-    @Order(5)
-    void expiredLocks_doNotBlockNewReservation() throws Exception {
-        String firstUser = "auth0|lock-user-2";
-        String secondUser = "auth0|lock-user-3";
-        String body = seatsRequestBody(SHOWTIME_ID, 6);
-
-        String reservationJson = mockMvc.perform(post("/api/reservations")
-                        .header("X-Debug-User", firstUser)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("CONFIRMED"))
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
-
-        long reservationId = extractReservationId(reservationJson);
-
-        seatLockRepository.findActiveLocksForShowtime(SHOWTIME_ID, OffsetDateTime.now())
-                .stream()
-                .filter(lock -> lock.getSeat().getId().equals(6L))
-                .forEach(lock -> {
-                    lock.setLockExpiresAt(OffsetDateTime.now().minusMinutes(10));
-                    lock.setStatus(SeatLockStatus.ACTIVE);
-                });
-        seatLockRepository.saveAll(seatLockRepository.findActiveLocksForShowtime(SHOWTIME_ID, OffsetDateTime.now()));
-
-        mockMvc.perform(post("/api/reservations")
-                        .header("X-Debug-User", secondUser)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.status").value(409))
-                .andExpect(jsonPath("$.error", containsString("Conflict")))
-                .andExpect(jsonPath("$.message", containsString("already reserved")));
+        body.append("]}");
+        return body.toString();
     }
 
     private long extractReservationId(String json) {
         String marker = "\"reservationId\":";
-        int idx = json.indexOf(marker);
-        if (idx == -1) {
-            throw new IllegalStateException("reservationId not found in JSON: " + json);
+        int markerIndex = json.indexOf(marker);
+
+        if (markerIndex < 0) {
+            throw new IllegalStateException("reservationId not found: " + json);
         }
-        int start = idx + marker.length();
-        int end = json.indexOf(",", start);
-        if (end == -1) {
-            end = json.indexOf("}", start);
+
+        int valueStart = markerIndex + marker.length();
+        int valueEnd = json.indexOf(",", valueStart);
+
+        if (valueEnd < 0) {
+            valueEnd = json.indexOf("}", valueStart);
         }
-        return Long.parseLong(json.substring(start, end).trim());
+
+        return Long.parseLong(json.substring(valueStart, valueEnd).trim());
     }
 }
