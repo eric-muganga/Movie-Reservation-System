@@ -82,7 +82,12 @@ public class SeatLockServiceImpl implements ISeatLockService {
                     "Some seats are currently locked (LOCKED) by another user: " + conflictingSeatIds);
         }
 
-        seatLockRepository.releaseActiveLocks(user.getId(), showtimeId, seatIds);
+        seatLockRepository.releaseActiveLocks(
+                user.getId(),
+                showtimeId,
+                seatIds,
+                now
+        );
 
         OffsetDateTime expiresAt = now.plusMinutes(LOCK_MINUTES);
         List<SeatLock> newLocks = seats.stream()
@@ -110,7 +115,12 @@ public class SeatLockServiceImpl implements ISeatLockService {
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "User not found for auth0Sub: " + auth0Sub));
 
-        seatLockRepository.releaseActiveLocks(user.getId(), showtimeId, seatIds);
+        seatLockRepository.releaseActiveLocks(
+                user.getId(),
+                showtimeId,
+                seatIds,
+                OffsetDateTime.now()
+        );
     }
 
     @Override
