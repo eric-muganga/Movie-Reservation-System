@@ -111,10 +111,9 @@
     </a>
 </template>
 
-<script th:inline="javascript">
-    window.customerMoviesConfig = {
-        selectedDate: /*[[${selectedDate}]]*/ "2026-08-18"
-    };
-</script>
+<div id="customer-movies-config"
+     th:data-selected-date="${selectedDate}"
+     hidden>
+</div>
 </body>
 </html>
