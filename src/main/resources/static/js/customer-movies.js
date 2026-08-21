@@ -1,5 +1,6 @@
 document.addEventListener("DOMContentLoaded", async () => {
-    const selectedDate = window.customerMoviesConfig.selectedDate;
+    const config = document.getElementById("customer-movies-config");
+    const selectedDate = config.dataset.selectedDate;
 
     const loadingState = document.getElementById("loading-state");
     const errorState = document.getElementById("error-state");
