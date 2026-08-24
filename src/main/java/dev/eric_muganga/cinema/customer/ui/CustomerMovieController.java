@@ -1,4 +1,4 @@
-package dev.eric_muganga.cinema.admin.ui;
+package dev.eric_muganga.cinema.customer.ui;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
