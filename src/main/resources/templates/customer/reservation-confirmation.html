@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Reservation created | Cinema</title>
+
+    <link rel="stylesheet" th:href="@{/css/customer.css}">
+</head>
+<body>
+<header class="customer-header">
+    <a class="brand" th:href="@{/movies}">
+        Cinema
+    </a>
+</header>
+
+<main class="customer-shell">
+    <section class="state-message">
+        <p class="eyebrow">Reservation created</p>
+
+        <h1>Your seats are temporarily held.</h1>
+
+        <p class="hero-copy">
+            Your reservation reference is
+            <strong th:text="${reservationId}">0</strong>.
+        </p>
+
+        <p class="hero-copy">
+            Continue to payment to confirm your booking.
+        </p>
+
+        <a th:href="@{/movies}" class="btn-primary">
+            Back to movies
+        </a>
+    </section>
+</main>
+</body>
+</html>
