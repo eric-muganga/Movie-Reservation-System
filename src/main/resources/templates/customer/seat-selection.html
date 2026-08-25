@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Select seats | Cinema</title>
+
+    <link rel="stylesheet" th:href="@{/css/customer.css}">
+    <script defer th:src="@{/js/seat-selection.js}"></script>
+</head>
+<body>
+<header class="customer-header">
+    <a class="brand" th:href="@{/movies}">
+        Cinema
+    </a>
+
+    <nav class="customer-nav">
+        <a th:href="@{/movies}" class="nav-link">
+            Movies
+        </a>
+    </nav>
+</header>
+
+<main class="customer-shell">
+    <section class="booking-page-header">
+        <a class="back-link" th:href="@{/movies}">
+            ← Back to movies
+        </a>
+
+        <p class="eyebrow">Choose your seats</p>
+        <h1>Select your seats</h1>
+
+        <p id="auditorium-name" class="hero-copy">
+            Loading auditorium...
+        </p>
+    </section>
+
+    <section id="loading-state" class="state-message">
+        Loading seat availability...
+    </section>
+
+    <section id="error-state" class="state-message state-error" hidden>
+        <p id="error-message">
+            Unable to load seats. Please try again.
+        </p>
+
+        <button id="retry-button" class="btn-primary" type="button">
+            Try again
+        </button>
+    </section>
+
+    <section id="seat-selection-content" class="seat-selection-layout" hidden>
+        <div class="seat-map-card">
+            <div class="seat-map-heading">
+                <div>
+                    <h2>Seat map</h2>
+                    <p>Choose one or more available seats.</p>
+                </div>
+            </div>
+
+            <div class="seat-legend" aria-label="Seat availability legend">
+                <div class="legend-item">
+                    <span class="seat-legend-icon seat-available"></span>
+                    Available
+                </div>
+
+                <div class="legend-item">
+                    <span class="seat-legend-icon seat-selected"></span>
+                    Selected
+                </div>
+
+                <div class="legend-item">
+                    <span class="seat-legend-icon seat-locked"></span>
+                    Locked
+                </div>
+
+                <div class="legend-item">
+                    <span class="seat-legend-icon seat-reserved"></span>
+                    Reserved
+                </div>
+            </div>
+
+            <div class="screen-wrap">
+                <div class="screen">SCREEN</div>
+            </div>
+
+            <div id="seat-map" class="seat-map" aria-label="Cinema seat map"></div>
+        </div>
+
+        <aside class="booking-summary-card">
+            <h2>Your selection</h2>
+
+            <div class="summary-row">
+                <span>Auditorium</span>
+                <strong id="summary-auditorium">—</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Seats</span>
+                <strong id="selected-seat-labels">No seats selected</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Seat count</span>
+                <strong id="selected-seat-count">0</strong>
+            </div>
+
+            <div class="summary-row summary-total">
+                <span>Total</span>
+                <strong id="selection-total">€0.00</strong>
+            </div>
+
+            <p class="summary-hint">
+                Selected seats are held temporarily while you continue to payment.
+            </p>
+
+            <div id="checkout-error" class="checkout-error" hidden></div>
+
+            <button id="continue-button"
+                    class="btn-primary btn-full"
+                    type="button"
+                    disabled>
+                Continue to payment
+            </button>
+        </aside>
+    </section>
+</main>
+
+<div id="seat-selection-config"
+     th:data-showtime-id="${showtimeId}"
+     th:data-debug-user="'auth0|payment-user-1'"
+     hidden>
+</div>
+</body>
+</html>
