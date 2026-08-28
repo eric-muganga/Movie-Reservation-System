@@ -22,12 +22,12 @@ public class CustomerBookingController {
     }
 
 
-    @GetMapping("/reservations/{reservationId}/confirmation")
-    public String reservationConfirmation(
-            @PathVariable Long reservationId,
-            Model model
-    ) {
-        model.addAttribute("reservationId", reservationId);
-        return "customer/reservation-confirmation";
-    }
+//    @GetMapping("/reservations/{reservationId}/confirmation")
+//    public String reservationConfirmation(
+//            @PathVariable Long reservationId,
+//            Model model
+//    ) {
+//        model.addAttribute("reservationId", reservationId);
+//        return "customer/reservation-confirmation";
+//    }
 }
