@@ -184,18 +184,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function updateSelectionSummary() {
         const selected = Array.from(selectedSeats.values());
-        const total = getBasePrice() * selected.length;
+        const seatCount = selected.length;
+        const total = getBasePrice() * seatCount;
 
-        selectedSeatCount.textContent = selected.length;
+        selectedSeatCount.textContent = seatCount;
 
         selectedSeatLabels.textContent =
-            selected.length === 0
+            seatCount === 0
                 ? "No seats selected"
                 : selected.map(seat => seat.label).join(", ");
 
         selectionTotal.textContent = formatPrice(total);
 
-        continueButton.disabled = selected.length === 0;
+        continueButton.disabled = seatCount === 0;
     }
 
     async function continueToPayment() {
@@ -209,8 +210,14 @@ document.addEventListener("DOMContentLoaded", () => {
         clearCheckoutError();
 
         try {
-            await lockSeats(seatIds);
-
+            /*
+             * startCheckout() already validates seats, creates active locks,
+             * and creates the PENDING reservation inside one transaction.
+             *
+             * Do not call POST /api/reservations/locks here as well.
+             * Calling both endpoints creates duplicate locking work and can
+             * make the reservation request conflict with the user's own lock.
+             */
             const reservation = await createReservation(seatIds);
 
             window.location.href =
@@ -223,32 +230,15 @@ document.addEventListener("DOMContentLoaded", () => {
                 "Unable to reserve the selected seats. Please try again."
             );
 
-            await loadSeating();
+            /*
+             * Do not call loadSeating() here.
+             * It rebuilds the seat map and removes selected seat state.
+             */
         } finally {
             setCheckoutLoading(false);
         }
     }
 
-    async function lockSeats(seatIds) {
-        const response = await fetch("/api/reservations/locks", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "X-Debug-User": debugUser
-            },
-            body: JSON.stringify({
-                showtimeId,
-                seatIds
-            })
-        });
-
-        if (!response.ok) {
-            throw await toApiError(
-                response,
-                "Unable to lock selected seats."
-            );
-        }
-    }
 
     async function createReservation(seatIds) {
         const response = await fetch("/api/reservations", {
@@ -283,14 +273,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function getBasePrice() {
-        /*
-         * The current seating endpoint does not return the showtime base price.
-         * This temporary fallback keeps the UI functional visually.
-         *
-         * In the next step, add basePrice to ShowtimeSeatingResponse and
-         * replace this fallback with: return Number(seatingData.basePrice).
-         */
-        return 0;
+        const basePrice = Number(seatingData?.basePrice);
+
+        return Number.isFinite(basePrice) ? basePrice : 0;
     }
 
     function formatPrice(value) {
