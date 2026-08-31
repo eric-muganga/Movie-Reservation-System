@@ -11,6 +11,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.time.OffsetDateTime;
 
@@ -87,6 +88,19 @@ public class GlobalExceptionHandler {
             WebRequest request
     ) {
         HttpStatus status = HttpStatus.BAD_REQUEST;
+
+        return new ResponseEntity<>(
+                buildError(status, ex.getMessage(), request),
+                status
+        );
+    }
+
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleMissingResource(
+            NoResourceFoundException ex,
+            WebRequest request
+    ) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
 
         return new ResponseEntity<>(
                 buildError(status, ex.getMessage(), request),
