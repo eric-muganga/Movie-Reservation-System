@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Now Showing | Cinema</title>
+
+    <link rel="stylesheet" th:href="@{/css/customer.css}">
+    <script defer th:src="@{/js/customer-movies.js}"></script>
+</head>
+<body>
+<header class="customer-header">
+    <a class="brand" th:href="@{/movies}">
+        Cinema
+    </a>
+
+    <nav class="customer-nav">
+        <a th:href="@{/movies}" class="nav-link active">
+            Movies
+        </a>
+    </nav>
+</header>
+
+<main class="customer-shell">
+    <section class="hero">
+        <p class="eyebrow">Now showing</p>
+        <h1>Choose your next movie</h1>
+        <p class="hero-copy">
+            Pick a date, choose a screening, and reserve your seats.
+        </p>
+    </section>
+
+    <section class="date-card">
+        <form method="get" th:action="@{/movies}" class="date-form">
+            <div>
+                <label for="date">Screening date</label>
+
+                <div class="date-controls">
+                    <input id="date"
+                           name="date"
+                           type="date"
+                           th:value="${selectedDate}"
+                           required>
+
+                    <button type="submit" class="btn-primary">
+                        View showtimes
+                    </button>
+                </div>
+            </div>
+        </form>
+    </section>
+
+    <section class="movie-section">
+        <div class="section-heading">
+            <div>
+                <h2>Available movies</h2>
+                <p id="selected-date-label">
+                    Loading showtimes...
+                </p>
+            </div>
+        </div>
+
+        <div id="loading-state" class="state-message">
+            Loading movies and showtimes...
+        </div>
+
+        <div id="error-state" class="state-message state-error" hidden>
+            Unable to load movies right now. Please try again.
+        </div>
+
+        <div id="empty-state" class="state-message" hidden>
+            No movies are scheduled for the selected date.
+        </div>
+
+        <div id="movie-grid" class="movie-grid" hidden></div>
+    </section>
+</main>
+
+<template id="movie-card-template">
+    <article class="movie-card">
+        <div class="movie-poster-wrap">
+            <img class="movie-poster" src="" alt="">
+            <div class="poster-fallback" hidden>
+                No poster available
+            </div>
+        </div>
+
+        <div class="movie-content">
+            <div class="movie-heading">
+                <h3 class="movie-title"></h3>
+                <span class="movie-duration"></span>
+            </div>
+
+            <div class="genre-list"></div>
+
+            <p class="movie-description"></p>
+
+            <div class="showtime-block">
+                <h4>Showtimes</h4>
+                <div class="showtime-list"></div>
+            </div>
+        </div>
+    </article>
+</template>
+
+<template id="showtime-template">
+    <a class="showtime-link">
+        <span class="showtime-time"></span>
+        <span class="showtime-auditorium"></span>
+        <span class="showtime-price"></span>
+    </a>
+</template>
+
+<div id="customer-movies-config"
+     th:data-selected-date="${selectedDate}"
+     hidden>
+</div>
+</body>
+</html>

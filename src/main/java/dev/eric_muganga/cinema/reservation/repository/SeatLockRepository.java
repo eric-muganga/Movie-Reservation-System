@@ -28,30 +28,56 @@ public interface SeatLockRepository extends JpaRepository<SeatLock, Long> {
             @Param("now") OffsetDateTime now
     );
 
-    @Modifying
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
         update SeatLock l
            set l.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.EXPIRED
-        where l.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.ACTIVE
-          and l.lockExpiresAt <= :now
+         where l.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.ACTIVE
+           and l.lockExpiresAt <= :now
     """)
     int expireLocks(@Param("now") OffsetDateTime now);
 
-    Optional<SeatLock> findByShowtimeAndSeatAndStatus(Showtime showtime,
-                                                      Seat seat,
-                                                      SeatLockStatus status);
+    Optional<SeatLock> findByShowtimeAndSeatAndStatus(
+            Showtime showtime,
+            Seat seat,
+            SeatLockStatus status
+    );
 
-    @Modifying
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
     @Query("""
-    update SeatLock sl
-       set sl.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.EXPIRED
-     where sl.user.id = :userId
-       and sl.showtime.id = :showtimeId
-       and sl.seat.id in :seatIds
-       and sl.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.ACTIVE
-       and sl.lockExpiresAt > CURRENT_TIMESTAMP
-""")
-    int releaseActiveLocks(@Param("userId") Long userId,
-                           @Param("showtimeId") Long showtimeId,
-                           @Param("seatIds") List<Long> seatIds);
+        update SeatLock sl
+           set sl.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.EXPIRED
+         where sl.user.id = :userId
+           and sl.showtime.id = :showtimeId
+           and sl.seat.id in :seatIds
+           and sl.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.ACTIVE
+           and sl.lockExpiresAt > :now
+    """)
+    int releaseActiveLocks(
+            @Param("userId") Long userId,
+            @Param("showtimeId") Long showtimeId,
+            @Param("seatIds") List<Long> seatIds,
+            @Param("now") OffsetDateTime now
+    );
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+        update SeatLock sl
+           set sl.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.EXPIRED
+         where sl.user.id = :userId
+           and sl.showtime.id = :showtimeId
+           and sl.status = dev.eric_muganga.cinema.reservation.entity.SeatLockStatus.ACTIVE
+           and sl.lockExpiresAt > :now
+    """)
+    int releaseActiveLocksForUserAndShowtime(
+            @Param("userId") Long userId,
+            @Param("showtimeId") Long showtimeId,
+            @Param("now") OffsetDateTime now
+    );
+
+    List<SeatLock> findByShowtimeIdAndUserIdAndStatus(
+            Long showtimeId,
+            Long userId,
+            SeatLockStatus status
+    );
 }

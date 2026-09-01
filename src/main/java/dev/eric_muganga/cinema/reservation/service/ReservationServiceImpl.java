@@ -110,9 +110,8 @@ public class ReservationServiceImpl implements IReservationService {
         Reservation reservation = Reservation.builder()
                 .user(user)
                 .showtime(showtime)
-                .status(ReservationStatus.CONFIRMED)
-                .paymentStatus(PaymentStatus.PAID)
-                .paidAt(now)
+                .status(ReservationStatus.PENDING)
+                .paymentStatus(PaymentStatus.PENDING)
                 .totalAmount(totalAmount)
                 .createdAt(now)
                 .updatedAt(now)
@@ -120,18 +119,6 @@ public class ReservationServiceImpl implements IReservationService {
 
         Reservation savedReservation = reservationRepository.save(reservation);
 
-        List<ReservationSeat> reservationSeats = seats.stream()
-                .map(seat -> ReservationSeat.builder()
-                        .reservation(savedReservation)
-                        .seat(seat)
-                        .showtime(showtime)
-                        .price(basePrice)
-                        .build())
-                .toList();
-        reservationSeatRepository.saveAll(reservationSeats);
-
-        newLocks.forEach(lock -> lock.setStatus(SeatLockStatus.CONSUMED));
-        seatLockRepository.saveAll(newLocks);
 
         return new ReservationResult(
                 savedReservation.getId(),
@@ -139,12 +126,13 @@ public class ReservationServiceImpl implements IReservationService {
                 showtime.getId(),
                 savedReservation.getCreatedAt(),
                 savedReservation.getTotalAmount(),
-                reservationSeats.stream()
-                        .map(rs -> new ReservedSeatDto(
-                                rs.getSeat().getId(),
-                                rs.getSeat().getRowLabel(),
-                                rs.getSeat().getSeatNumber(),
-                                rs.getPrice()))
+                seats.stream()
+                        .map(seat -> new ReservedSeatDto(
+                                seat.getId(),
+                                seat.getRowLabel(),
+                                seat.getSeatNumber(),
+                                basePrice
+                        ))
                         .toList()
         );
     }
@@ -153,52 +141,105 @@ public class ReservationServiceImpl implements IReservationService {
     @Transactional
     public ReservationResult confirmPayment(Long reservationId, String paymentReference) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + reservationId));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException("Reservation not found: " + reservationId)
+                );
 
         if (reservation.getPaymentStatus() == PaymentStatus.PAID) {
             return toResult(reservation);
         }
 
         if (reservation.getStatus() == ReservationStatus.CANCELLED) {
-            throw new IllegalStateException("Cannot confirm payment for a cancelled reservation");
+            throw new IllegalStateException(
+                    "Cannot confirm payment for a cancelled reservation"
+            );
         }
 
         OffsetDateTime now = OffsetDateTime.now();
+
+        List<SeatLock> activeLocks = seatLockRepository
+                .findByShowtimeIdAndUserIdAndStatus(
+                        reservation.getShowtime().getId(),
+                        reservation.getUser().getId(),
+                        SeatLockStatus.ACTIVE
+                );
+
+        if (activeLocks.isEmpty()) {
+            throw new SeatConflictException(
+                    "The seat hold has expired. Please select seats again."
+            );
+        }
+
+        List<ReservationSeat> reservationSeats = activeLocks.stream()
+                .map(lock -> ReservationSeat.builder()
+                        .reservation(reservation)
+                        .showtime(reservation.getShowtime())
+                        .seat(lock.getSeat())
+                        .price(reservation.getShowtime().getBasePrice())
+                        .build())
+                .toList();
+
+        reservationSeatRepository.saveAll(reservationSeats);
+
         reservation.setStatus(ReservationStatus.CONFIRMED);
         reservation.setPaymentStatus(PaymentStatus.PAID);
         reservation.setPaymentReference(paymentReference);
         reservation.setPaidAt(now);
         reservation.setUpdatedAt(now);
 
-        Reservation saved = reservationRepository.save(reservation);
-        return toResult(saved);
+        Reservation savedReservation = reservationRepository.save(reservation);
+
+        activeLocks.forEach(lock -> lock.setStatus(SeatLockStatus.CONSUMED));
+        seatLockRepository.saveAll(activeLocks);
+
+        return toResult(savedReservation);
     }
 
     @Override
     @Transactional
     public void failPayment(Long reservationId, String paymentReference) {
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + reservationId));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Reservation not found: " + reservationId
+                        )
+                );
 
         if (reservation.getPaymentStatus() == PaymentStatus.PAID) {
-            throw new IllegalStateException("Cannot fail payment for a paid reservation");
+            throw new IllegalStateException(
+                    "Cannot fail payment for a paid reservation"
+            );
         }
 
         reservation.setPaymentStatus(PaymentStatus.FAILED);
         reservation.setPaymentReference(paymentReference);
         reservation.setStatus(ReservationStatus.CANCELLED);
         reservation.setUpdatedAt(OffsetDateTime.now());
+
         reservationRepository.save(reservation);
+
+        seatLockRepository.releaseActiveLocksForUserAndShowtime(
+                reservation.getUser().getId(),
+                reservation.getShowtime().getId(),
+                OffsetDateTime.now());
     }
 
     @Override
     @Transactional
     public void cancelReservation(String auth0Sub, Long reservationId) {
         User user = userRepository.findByAuth0Sub(auth0Sub)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found for auth0Sub: " + auth0Sub));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "User not found for auth0Sub: " + auth0Sub
+                        )
+                );
 
         Reservation reservation = reservationRepository.findById(reservationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Reservation not found: " + reservationId));
+                .orElseThrow(() ->
+                        new ResourceNotFoundException(
+                                "Reservation not found: " + reservationId
+                        )
+                );
 
         if (!reservation.getUser().getId().equals(user.getId())) {
             throw new ResourceNotFoundException("Reservation not found: " + reservationId);
@@ -208,25 +249,60 @@ public class ReservationServiceImpl implements IReservationService {
             return;
         }
 
+        if (reservation.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new IllegalStateException(
+                    "Paid reservations cannot be cancelled through this endpoint"
+            );
+        }
+
         reservation.setStatus(ReservationStatus.CANCELLED);
         reservation.setUpdatedAt(OffsetDateTime.now());
+
         reservationRepository.save(reservation);
+
+        seatLockRepository.releaseActiveLocksForUserAndShowtime(
+                reservation.getUser().getId(),
+                reservation.getShowtime().getId(),
+                OffsetDateTime.now()
+        );
     }
 
     private ReservationResult toResult(Reservation reservation) {
+        List<ReservedSeatDto> seats = reservation.getReservationSeats() == null
+                ? List.of()
+                : reservation.getReservationSeats().stream()
+                .map(rs -> new ReservedSeatDto(
+                        rs.getSeat().getId(),
+                        rs.getSeat().getRowLabel(),
+                        rs.getSeat().getSeatNumber(),
+                        rs.getPrice()
+                ))
+                .toList();
+
         return new ReservationResult(
                 reservation.getId(),
                 reservation.getStatus().name(),
                 reservation.getShowtime().getId(),
                 reservation.getCreatedAt(),
                 reservation.getTotalAmount(),
-                reservation.getReservationSeats().stream()
-                        .map(rs -> new ReservedSeatDto(
-                                rs.getSeat().getId(),
-                                rs.getSeat().getRowLabel(),
-                                rs.getSeat().getSeatNumber(),
-                                rs.getPrice()))
-                        .toList()
+                seats
         );
+    }
+
+
+    private void releaseReservationLocks(Reservation reservation) {
+        List<SeatLock> activeLocks = seatLockRepository
+                .findByShowtimeIdAndUserIdAndStatus(
+                        reservation.getShowtime().getId(),
+                        reservation.getUser().getId(),
+                        SeatLockStatus.ACTIVE
+                );
+
+        if (activeLocks.isEmpty()) {
+            return;
+        }
+
+        activeLocks.forEach(lock -> lock.setStatus(SeatLockStatus.EXPIRED));
+        seatLockRepository.saveAll(activeLocks);
     }
 }

@@ -53,6 +53,7 @@ public class SeatingServiceImpl implements ISeatingService {
                     showtimeId,
                     auditoriumId,
                     auditoriumName,
+                    showtime.getBasePrice(),
                     List.of()
             );
         }
@@ -121,6 +122,7 @@ public class SeatingServiceImpl implements ISeatingService {
                 showtimeId,
                 auditoriumId,
                 auditoriumName,
+                showtime.getBasePrice(),
                 rowDtos
         );
     }
