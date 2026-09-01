@@ -1,19 +1,11 @@
 -- V5__seed_future_showtimes.sql
+--
+-- Development/demo showtimes.
+-- All schedules use Screen 1 and are placed 7–10 days in the future.
+-- PostgreSQL prevents overlapping screenings through the
+-- no_overlapping_showtimes exclusion constraint.
 
-DO $$
-DECLARE
-screen_1_id BIGINT;
-BEGIN
-SELECT id
-INTO screen_1_id
-FROM auditoriums
-WHERE name = 'Screen 1';
-
-IF screen_1_id IS NULL THEN
-        RAISE EXCEPTION 'Screen 1 auditorium does not exist';
-END IF;
-
-    -- Day 1: Inception and The Dark Knight
+-- Day 7: Inception
 INSERT INTO showtimes (
     movie_id,
     auditorium_id,
@@ -24,21 +16,17 @@ INSERT INTO showtimes (
 )
 SELECT
     m.id,
-    screen_1_id,
-    ((CURRENT_DATE + 1) + TIME '18:00')::timestamptz,
-        ((CURRENT_DATE + 1) + TIME '20:30')::timestamptz,
+    a.id,
+    ((CURRENT_DATE + 7) + TIME '18:00')::timestamptz,
+        ((CURRENT_DATE + 7) + TIME '20:30')::timestamptz,
         'SCHEDULED',
     12.50
 FROM movies m
+         JOIN auditoriums a ON a.name = 'Screen 1'
 WHERE m.title = 'Inception'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM showtimes s
-    WHERE s.movie_id = m.id
-      AND s.auditorium_id = screen_1_id
-      AND s.start_time = ((CURRENT_DATE + 1) + TIME '18:00')::timestamptz
-);
+    ON CONFLICT ON CONSTRAINT no_overlapping_showtimes DO NOTHING;
 
+-- Day 7: The Dark Knight
 INSERT INTO showtimes (
     movie_id,
     auditorium_id,
@@ -49,22 +37,17 @@ INSERT INTO showtimes (
 )
 SELECT
     m.id,
-    screen_1_id,
-    ((CURRENT_DATE + 1) + TIME '21:00')::timestamptz,
-        ((CURRENT_DATE + 1) + TIME '23:45')::timestamptz,
+    a.id,
+    ((CURRENT_DATE + 7) + TIME '21:00')::timestamptz,
+        ((CURRENT_DATE + 7) + TIME '23:45')::timestamptz,
         'SCHEDULED',
     13.50
 FROM movies m
+         JOIN auditoriums a ON a.name = 'Screen 1'
 WHERE m.title = 'The Dark Knight'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM showtimes s
-    WHERE s.movie_id = m.id
-      AND s.auditorium_id = screen_1_id
-      AND s.start_time = ((CURRENT_DATE + 1) + TIME '21:00')::timestamptz
-);
+    ON CONFLICT ON CONSTRAINT no_overlapping_showtimes DO NOTHING;
 
--- Day 2: Interstellar and The Matrix
+-- Day 8: Interstellar
 INSERT INTO showtimes (
     movie_id,
     auditorium_id,
@@ -75,21 +58,17 @@ INSERT INTO showtimes (
 )
 SELECT
     m.id,
-    screen_1_id,
-    ((CURRENT_DATE + 2) + TIME '18:00')::timestamptz,
-        ((CURRENT_DATE + 2) + TIME '21:00')::timestamptz,
+    a.id,
+    ((CURRENT_DATE + 8) + TIME '18:00')::timestamptz,
+        ((CURRENT_DATE + 8) + TIME '21:00')::timestamptz,
         'SCHEDULED',
     14.50
 FROM movies m
+         JOIN auditoriums a ON a.name = 'Screen 1'
 WHERE m.title = 'Interstellar'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM showtimes s
-    WHERE s.movie_id = m.id
-      AND s.auditorium_id = screen_1_id
-      AND s.start_time = ((CURRENT_DATE + 2) + TIME '18:00')::timestamptz
-);
+    ON CONFLICT ON CONSTRAINT no_overlapping_showtimes DO NOTHING;
 
+-- Day 8: The Matrix
 INSERT INTO showtimes (
     movie_id,
     auditorium_id,
@@ -100,22 +79,17 @@ INSERT INTO showtimes (
 )
 SELECT
     m.id,
-    screen_1_id,
-    ((CURRENT_DATE + 2) + TIME '21:15')::timestamptz,
-        ((CURRENT_DATE + 2) + TIME '23:45')::timestamptz,
+    a.id,
+    ((CURRENT_DATE + 8) + TIME '21:15')::timestamptz,
+        ((CURRENT_DATE + 8) + TIME '23:45')::timestamptz,
         'SCHEDULED',
     12.50
 FROM movies m
+         JOIN auditoriums a ON a.name = 'Screen 1'
 WHERE m.title = 'The Matrix'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM showtimes s
-    WHERE s.movie_id = m.id
-      AND s.auditorium_id = screen_1_id
-      AND s.start_time = ((CURRENT_DATE + 2) + TIME '21:15')::timestamptz
-);
+    ON CONFLICT ON CONSTRAINT no_overlapping_showtimes DO NOTHING;
 
--- Day 3: Toy Story, La La Land, Parasite
+-- Day 9: Toy Story
 INSERT INTO showtimes (
     movie_id,
     auditorium_id,
@@ -126,21 +100,17 @@ INSERT INTO showtimes (
 )
 SELECT
     m.id,
-    screen_1_id,
-    ((CURRENT_DATE + 3) + TIME '14:00')::timestamptz,
-        ((CURRENT_DATE + 3) + TIME '15:30')::timestamptz,
+    a.id,
+    ((CURRENT_DATE + 9) + TIME '14:00')::timestamptz,
+        ((CURRENT_DATE + 9) + TIME '15:30')::timestamptz,
         'SCHEDULED',
     10.00
 FROM movies m
+         JOIN auditoriums a ON a.name = 'Screen 1'
 WHERE m.title = 'Toy Story'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM showtimes s
-    WHERE s.movie_id = m.id
-      AND s.auditorium_id = screen_1_id
-      AND s.start_time = ((CURRENT_DATE + 3) + TIME '14:00')::timestamptz
-);
+    ON CONFLICT ON CONSTRAINT no_overlapping_showtimes DO NOTHING;
 
+-- Day 9: La La Land
 INSERT INTO showtimes (
     movie_id,
     auditorium_id,
@@ -151,21 +121,17 @@ INSERT INTO showtimes (
 )
 SELECT
     m.id,
-    screen_1_id,
-    ((CURRENT_DATE + 3) + TIME '17:00')::timestamptz,
-        ((CURRENT_DATE + 3) + TIME '19:30')::timestamptz,
+    a.id,
+    ((CURRENT_DATE + 9) + TIME '17:00')::timestamptz,
+        ((CURRENT_DATE + 9) + TIME '19:30')::timestamptz,
         'SCHEDULED',
     12.00
 FROM movies m
+         JOIN auditoriums a ON a.name = 'Screen 1'
 WHERE m.title = 'La La Land'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM showtimes s
-    WHERE s.movie_id = m.id
-      AND s.auditorium_id = screen_1_id
-      AND s.start_time = ((CURRENT_DATE + 3) + TIME '17:00')::timestamptz
-);
+    ON CONFLICT ON CONSTRAINT no_overlapping_showtimes DO NOTHING;
 
+-- Day 9: Parasite
 INSERT INTO showtimes (
     movie_id,
     auditorium_id,
@@ -176,22 +142,17 @@ INSERT INTO showtimes (
 )
 SELECT
     m.id,
-    screen_1_id,
-    ((CURRENT_DATE + 3) + TIME '20:00')::timestamptz,
-        ((CURRENT_DATE + 3) + TIME '22:30')::timestamptz,
+    a.id,
+    ((CURRENT_DATE + 9) + TIME '20:00')::timestamptz,
+        ((CURRENT_DATE + 9) + TIME '22:30')::timestamptz,
         'SCHEDULED',
     13.00
 FROM movies m
+         JOIN auditoriums a ON a.name = 'Screen 1'
 WHERE m.title = 'Parasite'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM showtimes s
-    WHERE s.movie_id = m.id
-      AND s.auditorium_id = screen_1_id
-      AND s.start_time = ((CURRENT_DATE + 3) + TIME '20:00')::timestamptz
-);
+    ON CONFLICT ON CONSTRAINT no_overlapping_showtimes DO NOTHING;
 
--- Day 4: John Wick
+-- Day 10: John Wick
 INSERT INTO showtimes (
     movie_id,
     auditorium_id,
@@ -202,18 +163,12 @@ INSERT INTO showtimes (
 )
 SELECT
     m.id,
-    screen_1_id,
-    ((CURRENT_DATE + 4) + TIME '19:00')::timestamptz,
-        ((CURRENT_DATE + 4) + TIME '21:00')::timestamptz,
+    a.id,
+    ((CURRENT_DATE + 10) + TIME '19:00')::timestamptz,
+        ((CURRENT_DATE + 10) + TIME '21:00')::timestamptz,
         'SCHEDULED',
     13.50
 FROM movies m
+         JOIN auditoriums a ON a.name = 'Screen 1'
 WHERE m.title = 'John Wick'
-  AND NOT EXISTS (
-    SELECT 1
-    FROM showtimes s
-    WHERE s.movie_id = m.id
-      AND s.auditorium_id = screen_1_id
-      AND s.start_time = ((CURRENT_DATE + 4) + TIME '19:00')::timestamptz
-);
-END $$;
+    ON CONFLICT ON CONSTRAINT no_overlapping_showtimes DO NOTHING;
